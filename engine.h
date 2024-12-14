@@ -56,7 +56,7 @@ int alphaBeta(int alpha, int beta, int depthleft, Position& pos, int ply)
     // Transposition table
 #if 0
     const HashTableEntry* entry = table.Get(pos.hash_value);
-    if (entry != nullptr && entry->key == pos.hash_value && !entry->is_pv)
+    if (entry != nullptr && entry->key == pos.hash_value && !entry->is_pv && entry->depth >= depthleft)
     {
         if (entry->bound == EXACT)
         {
@@ -111,11 +111,11 @@ int alphaBeta(int alpha, int beta, int depthleft, Position& pos, int ply)
             alpha = score; // alpha acts like max in MiniMax
             pos.posScore = alpha;
             pos.bestMove = move;
-            table.Save(pos.hash_value, new_depth, move, alpha, EXACT, 1);
+            table.Save(pos.hash_value, new_depth, move, alpha, UPPER_BOUND, 1);
         }
         else
         {
-            table.Save(pos.hash_value, new_depth, move, alpha, LOWER_BOUND, 0);
+            table.Save(pos.hash_value, new_depth, move, alpha, EXACT, 0);
         }
     }
     return alpha;
