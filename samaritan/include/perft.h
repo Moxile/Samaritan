@@ -1,11 +1,11 @@
 #pragma once
 
 #include <iostream>
-
 #include <chrono>
+
 #include "movegen.h"
 
-int fullsearch(int depth, Position &pos)
+static int fullsearch(int depth, Position &pos)
 {
     if (depth == 1)
     {
@@ -25,7 +25,7 @@ int fullsearch(int depth, Position &pos)
     return nodes;
 };
 
-void perft(int initial_depth, Position &pos)
+static void perft(int initial_depth, Position &pos)
 {
     std::cout << "Perft depth " << initial_depth << std::endl;
 
@@ -45,7 +45,7 @@ void perft(int initial_depth, Position &pos)
               << std::endl;
 };
 
-void branch_test(int initial_depth, Position &pos)
+static void branch_test(int initial_depth, Position &pos)
 {
     std::cout << "Branch test Depth " << initial_depth << std::endl;
 
