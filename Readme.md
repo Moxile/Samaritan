@@ -1,14 +1,25 @@
-# Introduction
-Welcome to my 4 player chess engine! This is still in progress so be patient :)  
+# Samaritan: A 4-Player Chess Engine  
 
-# Run Program
-```
+## Introduction  
+Welcome to Samaritan, a chess engine crafted for 4-player chess! This project is still in development, so please bear with us as we continue to enhance and polish it. Samaritan employs the Mailbox system for efficient move generation, reaching approximately 20 million nodes per second (nps, a measure of the engine's processing speed) on my hardware. I hope you have a great time exploring and using this engine!  
+
+## Building and Running the Program  
+To build and run Samaritan, execute the following commands in your terminal:  
+
+```bash  
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release  
 cmake --build build  
-.\build\samaritan.exe  
-```
+```  
 
-# Board indices
+Then, launch the executable:  
+- On Windows: `.\build\samaritan.exe`  
+- On Unix-like systems: `./build/samaritan`  
+
+These instructions assume you have CMake installed and are running from the project’s root directory. The engine is built using CMake, making it compatible across different platforms.  
+
+## Board Indices  
+The chessboard in Samaritan is represented as a grid with indices ranging from 0 to 223, as shown below. Each number corresponds to a specific square on the 4-player chessboard, which is crucial for understanding how moves are generated and positions are evaluated. For a standard 4-player chess setup, the board is typically a 14x14 grid (196 squares), though the engine uses a larger 16x14 array internally, with some indices possibly reserved for padding or special purposes. The vertical bars in the grid highlight the main playing area.  
+
 ```
   0   1   2   3|  4   5   6   7   8   9  10  11| 12  13  14  15  
  16  17  18  19| 20  21  22  23  24  25  26  27| 28  29  30  31  
@@ -25,3 +36,8 @@ cmake --build build
 192 193 194 195|196 197 198 199 200 201 202 203|204 205 206 207  
 208 209 210 211|212 213 214 215 216 217 218 219|220 221 222 223  
 ```
+
+## Credits  
+- **Special Thanks** to [Kooser](https://github.com/kooser6), also known as [Machina](https://www.chess.com/member/teammachina1), for introducing me to the world of chess programming and patiently answering my many questions. Without their guidance, this project wouldn’t exist.  
+- **Special Thanks** to [Ariana](https://github.com/arianahejazyan) for inspiring me to keep pushing forward and finish this project, as well as for countless hours of coding together.  
+- **Thanks** to TeamTitan and TeamTerminator for their quick and helpful responses to my questions.
