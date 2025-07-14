@@ -1,19 +1,13 @@
+# Introduction
+Welcome to my 4 player chess engine! This is still in progress so be patient :)
 
-Terminator values:
-ply=1, positions=20
-ply=2, positions=395
-ply=3, positions=7800
-ply=4, positions=152050
-ply=5, positions=3452310
-ply=6, positions=77430383
-ply=7, positions=1735784286
-
-
+# Run Program
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 .\build\samaritan.exe
 
 
+# Board indices
   0   1   2   3|  4   5   6   7   8   9  10  11| 12  13  14  15
  16  17  18  19| 20  21  22  23  24  25  26  27| 28  29  30  31
  32  33  34  35| 36  37  38  39  40  41  42  43| 44  45  46  47
