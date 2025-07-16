@@ -1,47 +1,66 @@
 #pragma once
 #include <stdexcept>
 
-template<size_t InputSize, size_t NodeCount>
-class DenseLayer {
+template <typename T>
+class DenseLayer
+{
+private:
+    size_t nodeCount_;
+    size_t inputSize_;
+    std::vector<T> weights_;
+    std::vector<T> biases_;
+
 public:
-    int** weights;
-    int* biases;
+    DenseLayer(size_t nodeCount, size_t inputSize)
+        : nodeCount_(nodeCount), inputSize_(inputSize), weights_(nodeCount * inputSize), biases_(inputSize)
+    {
+        if (nodeCount == 0 || inputSize == 0)
+        {
+            throw std::invalid_argument("NodeCount and InputSize must be greater than zero.");
+        }
 
-    void initializeWeightsAndBiases() {
-        for (size_t i = 0; i < NodeCount; ++i) {
-            for (size_t j = 0; j < InputSize; ++j) {
-                weights[i][j] = 0;  // Initialize with proper values
+        std::fill(weights_.begin(), weights_.end(), 0);
+        std::fill(biases_.begin(), biases_.end(), 0);
+    }
+
+    void setWeights(const std::vector<T> &weights)
+    {
+        if (weights.size() != nodeCount_ * inputSize_)
+        {
+            throw std::invalid_argument("Weights size does not match layer configuration.");
+        }
+        weights_ = weights;
+    }
+
+    void setBiases(const std::vector<T> &biases)
+    {
+        if (biases.size() != nodeCount_)
+        {
+            throw std::invalid_argument("Biases size does not match layer node count.");
+        }
+        biases_ = biases;
+    }
+
+    std::vector<T> forward(const std::vector<T> &input) const
+    {
+        if (input.size() != inputSize_)
+        {
+            throw std::invalid_argument("Input size does not match layer input size.");
+        }
+
+        std::vector<T> output(nodeCount_);
+
+        for (size_t i = 0; i < nodeCount_; ++i)
+        {
+            size_t index = i * inputSize_;
+            T sum = 0;
+            for (size_t j = 0; j < inputSize_; ++j)
+            {
+                sum += weights_[index + j] * input[j];
             }
-            biases[i] = 0;
+            output[i] = sum + biases_[i];
         }
-    }
 
-    DenseLayer() {
-        weights = new int*[NodeCount];
-        for (size_t i = 0; i < NodeCount; ++i) {
-            weights[i] = new int[InputSize];
-        }
-        biases = new int[NodeCount];
-        initializeWeightsAndBiases();
-    }
-
-    ~DenseLayer() {
-        for (size_t i = 0; i < NodeCount; ++i) {
-            delete[] weights[i];
-        }
-        delete[] weights;
-        delete[] biases;
-    }
-
-    int* forward(const int* input) const {
-        int* output = new int[NodeCount];
-        for (size_t i = 0; i < NodeCount; ++i) {
-            int sum = 0;
-            for (size_t j = 0; j < InputSize; ++j) {
-                sum += weights[i][j] * input[j];
-            }
-            output[i] = sum + biases[i];
-        }
         return output;
     }
 };
