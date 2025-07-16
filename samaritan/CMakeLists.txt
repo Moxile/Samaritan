@@ -17,15 +17,9 @@ enable_testing()
 find_package(CLI11 REQUIRED)
 find_package(GTest REQUIRED)
 
-# Source files (non-recursive GLOB since src/ has no subdirectories)
+# Source files
 file(GLOB MAIN_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 list(FILTER MAIN_SRC_FILES EXCLUDE REGEX "samaritan\\.cxx$")
-# Alternative: Explicit source list (uncomment to use)
-# set(MAIN_SRC_FILES
-#     src/file1.cpp
-#     src/file2.cpp
-#     # Add more as needed
-# )
 
 # Create library
 add_library(samaritan_lib STATIC ${MAIN_SRC_FILES})
@@ -38,18 +32,18 @@ add_executable(samaritan "${CMAKE_CURRENT_SOURCE_DIR}/samaritan.cxx")
 target_compile_options(samaritan PRIVATE ${COMMON_COMPILE_OPTIONS})
 target_link_libraries(samaritan PRIVATE samaritan_lib)
 
-# Test sources (assuming tests/ directory exists)
-file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cc")
-foreach(test_src IN LISTS TEST_SOURCES)
-    get_filename_component(test_name ${test_src} NAME_WE)
-    add_executable(${test_name} ${test_src})
-    target_include_directories(${test_name} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-    target_compile_options(${test_name} PRIVATE ${COMMON_COMPILE_OPTIONS})
-    target_link_libraries(${test_name} PRIVATE samaritan_lib GTest::gtest GTest::gtest_main)
-    add_test(NAME ${test_name} COMMAND ${test_name})
-endforeach()
+# Tests
+add_executable(dense_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/dense.cc")
+target_include_directories(dense_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_compile_options(dense_test PRIVATE ${COMMON_COMPILE_OPTIONS})
+target_link_libraries(dense_test PRIVATE 
+    samaritan_lib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+add_test(NAME dense_test COMMAND dense_test)
 
-# Optional: Install rules
+# Install rules
 install(TARGETS samaritan samaritan_lib
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
