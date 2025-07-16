@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/samaritan.dir/samaritan.cxx.o -o samaritan  libsamaritan_lib.a 

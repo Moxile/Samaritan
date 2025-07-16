@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsamaritan_lib.a CMakeFiles/samaritan_lib.dir/src/engine.cpp.o CMakeFiles/samaritan_lib.dir/src/movegen.cpp.o CMakeFiles/samaritan_lib.dir/src/utitlity.cpp.o
+/usr/bin/ranlib libsamaritan_lib.a

@@ -257,7 +257,7 @@ constexpr ExtMove *getQueenMoves(const Position &pos, const int loc, ExtMove *mo
     return moveList;
 }
 
-constexpr ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
+ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
 {
     for (int offset = 0; offset < offsetsNum[9]; offset++)
     {

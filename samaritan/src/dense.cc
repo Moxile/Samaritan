@@ -1,5 +1,6 @@
 
 #include <gtest/gtest.h>
+
 #include "nnue/dense.h"
 
 using namespace samaritan;
