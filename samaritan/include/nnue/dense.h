@@ -1,5 +1,9 @@
 #pragma once
+
+#include "nnue/activation/ReLu.h"
 #include <stdexcept>
+
+
 
 template <typename T>
 class DenseLayer
@@ -62,5 +66,21 @@ public:
         }
 
         return output;
+    }
+
+    void single_forward_add(const std::vector<T> &output, int node)
+    {
+        for(size_t i = 0; i < output.size(); i++)
+        {
+            output[i] += weights_[i][node]
+        }
+    }
+
+    void single_forward_rem(const std::vector<T> &output, int node)
+    {
+        for(size_t i = 0; i < output.size(); i++)
+        {
+            output[i] -= weights_[i][node]
+        }
     }
 };
