@@ -14,10 +14,10 @@ class NNUE
         int evaluation;
         std::vector<float> hidden_output_;
 
-        NNUE(size_t hiddensize, const Position &pos)
+        NNUE(size_t hiddensize, const Position &pos) : 
+            hidden(DenseLayer<float>(hiddensize, accumulator.FEATURE_COUNT)), 
+            output(DenseLayer<float>(1, hiddensize)), multiplier(1000)
         {
-            hidden = DenseLayer<float>(hiddensize, accumulator.FEATURE_COUT);
-            output = DenseLayer<float>(1, hiddensize);
         }
 
         void init_eval(const Position &pos)
