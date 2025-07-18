@@ -3,8 +3,6 @@
 #include "nnue/activation/ReLu.h"
 #include <stdexcept>
 
-
-
 template <typename T>
 class DenseLayer
 {
@@ -72,7 +70,7 @@ public:
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] += weights_[i][node]
+            output[i] += weights_[i][node];
         }
     }
 
@@ -80,7 +78,7 @@ public:
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] -= weights_[i][node]
+            output[i] -= weights_[i][node];
         }
     }
 };
