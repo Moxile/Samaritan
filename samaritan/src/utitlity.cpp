@@ -39,6 +39,16 @@ const void loadFEN(Position &pos, const std::string fen)
         part_counter++;
     }
 
+    // init accumulator
+    for(int i = 0; i < 225; i++)
+    {
+        if(pos.board.pieceMailbox[i] != NONE_PIECE)
+        {
+            pos.nnue.accumulator.set(get_board_feat(i, pos.board.pieceMailbox[i], pos.board.colorMailbox[i]));
+        }
+    }
+    pos.nnue.accumulator.set(get_turn_feat(initialState.curTurn));
+
     pos.gameStates.push_back(initialState);
 }
 

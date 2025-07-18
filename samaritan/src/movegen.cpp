@@ -8,7 +8,7 @@ To add:
 
 constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *moveList)
 {
-    int offset;
+    int offset = -1;
     bool isOnStartRank = false;
     bool nextPromotion = false;
     bool rightEnPassant = false;

@@ -1,5 +1,6 @@
 #include "engine.h"
 
+#include "search.h"
 
 namespace samaritan
 {
@@ -152,7 +153,7 @@ namespace samaritan
 
     void Engine::handleGo()
     {
-        std::cout << "bestmove h2h3" << std::endl << std::flush;
+        std::cout << negaMax(pos, 4) << std::endl << std::flush;
     }
 
     void Engine::handleStop()

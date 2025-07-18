@@ -2,7 +2,6 @@
 
 #include "nnue/dense.h"
 #include "nnue/accumulator.h"
-#include "position.h"
 
 class NNUE
 {
@@ -14,25 +13,14 @@ class NNUE
         int evaluation;
         std::vector<float> hidden_output_;
 
-        NNUE(size_t hiddensize, const Position &pos) : 
+        NNUE(size_t hiddensize) : 
             hidden(DenseLayer<float>(hiddensize, accumulator.FEATURE_COUNT)), 
             output(DenseLayer<float>(1, hiddensize)), multiplier(1000)
         {
         }
 
-        void init_eval(const Position &pos)
+        void init_eval()
         {
-            // init accumulator
-            for (int i = 0; i < 225; i++)
-            {
-                if (!isInvalidLocation(i))
-                {
-                    accumulator.input[accumulator.get_board_feat(i, pos.board.pieceMailbox[i], pos.board.colorMailbox[i])] = 1;
-                }
-            }
-
-            accumulator.input[accumulator.get_turn_fen(pos.gameStates.back().curTurn)] = 1;
-
             // get the eval
             auto input = accumulator.input;
             auto hidden_output = hidden.forward(input);
@@ -64,6 +52,6 @@ class NNUE
             auto output_value = output.forward(hidden_output_);
             evaluation = static_cast<int>(output_value[0] * multiplier);
         }
-}
+};
 
 

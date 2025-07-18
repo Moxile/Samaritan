@@ -36,11 +36,9 @@ class Accumulator
             input.resize(FEATURE_COUNT, 0);
         }
 
-        int set(int feat)
+        void set(int feat)
         {
-            if (std::find(changes.begin(), changes.end(), feat) == changes.end()) {
             changes.push_back(feat);
-            }
         }
 
         void clear(int feat)
@@ -49,15 +47,15 @@ class Accumulator
             if (it != changes.end()) {
                 changes.erase(it);
             }
-        }   
-
-        constexpr int get_board_feat(int loc, PieceType pie, PieceColor col) const
-        {
-            return board_table[loc] * 4*6 + pie * 4 + __builtin_ctz((unsigned int) col);
         }
+};
 
-        constexpr int get_turn_fen(PieceColor col) const
-        {
-            return __builtin_ctz((unsigned int) col) + 32480;
-        }
+constexpr int get_board_feat(int loc, PieceType pie, PieceColor col)
+{
+    return board_table[loc] * 4*6 + pie * 4 + __builtin_ctz((unsigned int) col);
+}
+
+constexpr int get_turn_feat(PieceColor col)
+{
+    return __builtin_ctz((unsigned int) col) + 32480;
 }
