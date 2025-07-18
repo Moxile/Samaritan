@@ -48,6 +48,7 @@ const void loadFEN(Position &pos, const std::string fen)
         }
     }
     pos.nnue.accumulator.set(get_turn_feat(initialState.curTurn));
+    pos.nnue.init_eval();
 
     pos.gameStates.push_back(initialState);
 }

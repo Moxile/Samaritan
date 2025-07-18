@@ -23,6 +23,7 @@ namespace samaritan
     {
         loadFEN(pos, modern_fen);
 
+
         auto* uciCommand = app.add_subcommand("uci", "[UCI] Start UCI protocol and identify the engine")
         ->callback([this]() { handleUCI(); });
 

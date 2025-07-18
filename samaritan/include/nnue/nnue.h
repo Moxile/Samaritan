@@ -17,6 +17,8 @@ class NNUE
             hidden(DenseLayer<float>(hiddensize, accumulator.FEATURE_COUNT)), 
             output(DenseLayer<float>(1, hiddensize)), multiplier(1000)
         {
+            accumulator = Accumulator();
+            accumulator.reset();
         }
 
         void init_eval()

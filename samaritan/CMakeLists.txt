@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Define common compile options
 set(COMMON_COMPILE_OPTIONS
-    $<$<CONFIG:Release>:-O3 -march=native>
+    $<$<CONFIG:Release>:-O3 -march=native -g>
     $<$<CONFIG:Debug>:-O0 -g>
 )
 

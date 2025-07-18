@@ -29,7 +29,7 @@ class Accumulator
         static constexpr size_t FEATURE_COUNT = 3844;
 
         std::vector<float> input;
-        std::vector<int> changes;
+        std::vector<int> changes = {};
 
         void reset()
         {
@@ -57,5 +57,5 @@ constexpr int get_board_feat(int loc, PieceType pie, PieceColor col)
 
 constexpr int get_turn_feat(PieceColor col)
 {
-    return __builtin_ctz((unsigned int) col) + 32480;
+    return __builtin_ctz((unsigned int) col) + 3240;
 }
