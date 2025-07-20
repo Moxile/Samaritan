@@ -40,7 +40,7 @@ const void loadFEN(Position &pos, const std::string fen)
     }
 
     // init accumulator
-    for(int i = 0; i < 225; i++)
+    for(int i = 0; i < 224; i++)
     {
         if(pos.board.pieceMailbox[i] != NONE_PIECE)
         {

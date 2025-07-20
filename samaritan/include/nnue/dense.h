@@ -21,8 +21,8 @@ public:
             throw std::invalid_argument("NodeCount and InputSize must be greater than zero.");
         }
 
-        std::fill(weights_.begin(), weights_.end(), 0);
-        std::fill(biases_.begin(), biases_.end(), 0);
+        std::fill(weights_.begin(), weights_.end(), .1f);
+        std::fill(biases_.begin(), biases_.end(), .1f);
     }
 
     void setWeights(const std::vector<T> &weights)
