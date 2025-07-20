@@ -14,15 +14,15 @@ private:
 
 public:
     DenseLayer(size_t nodeCount, size_t inputSize)
-        : nodeCount_(nodeCount), inputSize_(inputSize), weights_(nodeCount * inputSize), biases_(inputSize)
+        : nodeCount_(nodeCount), inputSize_(inputSize), weights_(nodeCount * inputSize), biases_(nodeCount_)
     {
         if (nodeCount == 0 || inputSize == 0)
         {
             throw std::invalid_argument("NodeCount and InputSize must be greater than zero.");
         }
 
-        std::fill(weights_.begin(), weights_.end(), 0);
-        std::fill(biases_.begin(), biases_.end(), 0);
+        std::fill(weights_.begin(), weights_.end(), .1f);
+        std::fill(biases_.begin(), biases_.end(), .1f);
     }
 
     void setWeights(const std::vector<T> &weights)
@@ -66,19 +66,19 @@ public:
         return output;
     }
 
-    void single_forward_add(const std::vector<T> &output, int node)
+    void single_forward_add(std::vector<T> &output, int node)
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] += weights_[i][node];
+            output[i] += weights_[node + inputSize_*i];
         }
     }
 
-    void single_forward_rem(const std::vector<T> &output, int node)
+    void single_forward_rem(std::vector<T> &output, int node)
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] -= weights_[i][node];
+            output[i] -= weights_[node + inputSize_*i];
         }
     }
 };

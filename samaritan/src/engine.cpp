@@ -1,5 +1,6 @@
 #include "engine.h"
 
+#include "search.h"
 
 namespace samaritan
 {
@@ -21,6 +22,7 @@ namespace samaritan
     Engine::Engine() : pos()
     {
         loadFEN(pos, modern_fen);
+
 
         auto* uciCommand = app.add_subcommand("uci", "[UCI] Start UCI protocol and identify the engine")
         ->callback([this]() { handleUCI(); });
@@ -152,7 +154,7 @@ namespace samaritan
 
     void Engine::handleGo()
     {
-        std::cout << "bestmove h2h3" << std::endl << std::flush;
+        std::cout << negaMax(pos, 4) << std::endl << std::flush;
     }
 
     void Engine::handleStop()
