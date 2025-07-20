@@ -128,14 +128,15 @@ public:
         board.colorMailbox[destination] = board.colorMailbox[loc];
         board.pieceMailbox[loc] = NONE_PIECE;
         board.colorMailbox[loc] = NONE_COLOR;
-
+        
+        auto special = move.special_move();
         // Handle Promotion
-        if(move.special_move() == 1 || move.special_move() == 3)
+        if(special == 1 || special == 3)
         {
             board.pieceMailbox[destination] = static_cast<PieceType>(move.promotion());
         }
         // Check castling
-        else if (move.special_move() == 4)
+        else if (special == 4)
         {
             switch (board.colorMailbox[destination])
             {
@@ -279,7 +280,7 @@ public:
         // Handle en passant
         else if(board.pieceMailbox[destination] == PAWN)
         {
-            if (move.special_move() == 2 || move.special_move() == 3)
+            if (special == 2 || special == 3)
             {
                 switch(board.colorMailbox[destination])
                 {

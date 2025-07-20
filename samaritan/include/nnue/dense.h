@@ -17,7 +17,7 @@ public:
     DenseLayer(size_t nodeCount, size_t inputSize)
         : nodeCount_(nodeCount), inputSize_(inputSize), weights_(nodeCount * inputSize), biases_(nodeCount_)
     {
-        assert(nodeCount == 0 || inputSize == 0);
+        assert(nodeCount != 0 && inputSize != 0);
 
         std::fill(weights_.begin(), weights_.end(), .1f);
         std::fill(biases_.begin(), biases_.end(), .1f);
@@ -25,13 +25,13 @@ public:
 
     void setWeights(const std::vector<T> &weights)
     {
-        assert(weights.size() != nodeCout_ * inputSize_);
+        assert(weights.size() == nodeCount_ * inputSize_);
         weights_ = weights;
     }
 
     void setBiases(const std::vector<T> &biases)
     {
-        assert(biases.size() != nodeCout_);
+        assert(biases.size() == nodeCount_);
         biases_ = biases;
     }
 
