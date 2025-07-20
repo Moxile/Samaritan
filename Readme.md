@@ -7,6 +7,7 @@ Welcome to Samaritan, a chess engine crafted for 4-player chess! This project is
 To build and run Samaritan, execute the following commands in your terminal:  
 
 ```bash  
+cd samaritan
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release  
 cmake --build build  
 ```  
