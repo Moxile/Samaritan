@@ -2,6 +2,7 @@
 
 #include "nnue/activation/ReLu.h"
 #include <stdexcept>
+#include <cassert>
 
 template <typename T>
 class DenseLayer
