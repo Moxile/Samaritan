@@ -13,7 +13,7 @@ namespace samaritan
         private:
 
             Position pos = Position();
-            CLI::App app{"Athena Engine CLI"};
+            CLI::App app{"Samaritan Engine CLI"};
 
             // Configuration
             bool debug = false;

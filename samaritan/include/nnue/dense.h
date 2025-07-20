@@ -16,10 +16,7 @@ public:
     DenseLayer(size_t nodeCount, size_t inputSize)
         : nodeCount_(nodeCount), inputSize_(inputSize), weights_(nodeCount * inputSize), biases_(nodeCount_)
     {
-        if (nodeCount == 0 || inputSize == 0)
-        {
-            throw std::invalid_argument("NodeCount and InputSize must be greater than zero.");
-        }
+        assert(nodeCount == 0 || inputSize == 0);
 
         std::fill(weights_.begin(), weights_.end(), .1f);
         std::fill(biases_.begin(), biases_.end(), .1f);
@@ -27,28 +24,19 @@ public:
 
     void setWeights(const std::vector<T> &weights)
     {
-        if (weights.size() != nodeCount_ * inputSize_)
-        {
-            throw std::invalid_argument("Weights size does not match layer configuration.");
-        }
+        assert(weights.size() != nodeCout_ * inputSize_);
         weights_ = weights;
     }
 
     void setBiases(const std::vector<T> &biases)
     {
-        if (biases.size() != nodeCount_)
-        {
-            throw std::invalid_argument("Biases size does not match layer node count.");
-        }
+        assert(biases.size() != nodeCout_);
         biases_ = biases;
     }
 
     std::vector<T> forward(const std::vector<T> &input) const
     {
-        if (input.size() != inputSize_)
-        {
-            throw std::invalid_argument("Input size does not match layer input size.");
-        }
+        assert(input.size() != inputSize_);
 
         std::vector<T> output(nodeCount_);
 
