@@ -16,6 +16,7 @@ enable_testing()
 # Find dependencies
 find_package(CLI11 REQUIRED)
 find_package(GTest REQUIRED)
+find_package(benchmark REQUIRED)
 
 # Source files
 file(GLOB MAIN_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -25,7 +26,7 @@ list(FILTER MAIN_SRC_FILES EXCLUDE REGEX "samaritan\\.cxx$")
 add_library(samaritan_lib STATIC ${MAIN_SRC_FILES})
 target_include_directories(samaritan_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_options(samaritan_lib PRIVATE ${COMMON_COMPILE_OPTIONS})
-target_link_libraries(samaritan_lib PUBLIC CLI11::CLI11)
+target_link_libraries(samaritan_lib PUBLIC CLI11::CLI11 benchmark::benchmark)
 
 # Create main executable
 add_executable(samaritan "${CMAKE_CURRENT_SOURCE_DIR}/samaritan.cxx")
@@ -36,10 +37,11 @@ target_link_libraries(samaritan PRIVATE samaritan_lib)
 add_executable(dense_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/dense.cc")
 target_include_directories(dense_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_options(dense_test PRIVATE ${COMMON_COMPILE_OPTIONS})
-target_link_libraries(dense_test PRIVATE 
+target_link_libraries(dense_test PRIVATE    
     samaritan_lib 
     GTest::gtest 
     GTest::gtest_main
+    benchmark::benchmark
 )
 add_test(NAME dense_test COMMAND dense_test)
 
