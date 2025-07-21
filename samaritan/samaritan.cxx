@@ -18,14 +18,17 @@ static void BM_Perft(benchmark::State& state) {
                                    "14/"
                                    "3,rP,rP,rP,rP,rP,rP,rP,rP,3/"
                                    "3,rR,rN,rB,rQ,rK,rB,rN,rR,3";
-        Position pos = Position();
-        loadFEN(pos, modern_fen);
+    Position pos = Position();
+    loadFEN(pos, modern_fen);
 
+    int nodes = 0;
+    int depth = state.range(0);
     for (auto _ : state) {
-        perft(4, pos);
+        nodes += fullsearch(depth, pos);
     }
+    state.SetItemsProcessed(nodes);
 }
-BENCHMARK(BM_Perft);
+BENCHMARK(BM_Perft)->Unit(benchmark::kMillisecond)->RangeMultiplier(2)->Range(1, 4)->ArgNames({"Depth"});
 
 int main(int argc, char* argv[])
 {
