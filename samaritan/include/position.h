@@ -247,32 +247,37 @@ public:
             }
         }
         // Update castling right when rook is moved
-        else if (board.pieceMailbox[destination] == ROOK)
+        else if (board.pieceMailbox[destination] == ROOK || state.lastCapturedPiece == ROOK)
         {
+            int rook = destination;
+            if(board.pieceMailbox[destination] == ROOK)
+            {
+                rook = loc;
+            }
             switch (board.colorMailbox[destination])
             {
             case RED:
-                if (loc == 220)
+                if (rook == 220)
                     state.castleRights = gameStates.back().castleRights & ~RED_OO;
-                else if (loc == 212)
+                else if (rook == 212)
                     state.castleRights = gameStates.back().castleRights & ~RED_OOO;
                 break;
             case BLUE:
-                if (loc == 49)
+                if (rook == 49)
                     state.castleRights = gameStates.back().castleRights & ~BLUE_OO;
-                else if (loc == 161)
+                else if (rook == 161)
                     state.castleRights = gameStates.back().castleRights & ~BLUE_OOO;
                 break;
             case YELLOW:
-                if (loc == 4)
+                if (rook == 4)
                     state.castleRights = gameStates.back().castleRights & ~YELLOW_OO;
-                else if (loc == 12)
+                else if (rook == 12)
                     state.castleRights = gameStates.back().castleRights & ~YELLOW_OOO;
                 break;
             case GREEN:
-                if (loc == 62)
+                if (rook == 62)
                     state.castleRights = gameStates.back().castleRights & ~GREEN_OO;
-                else if (loc == 174)
+                else if (rook == 174)
                     state.castleRights = gameStates.back().castleRights & ~GREEN_OOO;
                 break;
             }

@@ -154,7 +154,8 @@ namespace samaritan
 
     void Engine::handleGo()
     {
-        std::cout << negaMax(pos, 4) << std::endl << std::flush;
+        int eval = negaMax(pos, 4);
+        std::cout << "bestmove " << pos.gameStates.back().bestMove.toUCI() << " eval " << eval << std::endl << std::flush;
     }
 
     void Engine::handleStop()

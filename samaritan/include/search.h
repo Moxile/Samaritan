@@ -1,23 +1,26 @@
 #pragma once
 #include "movegen.h"
 
-int negaMax(Position& pos, int depth) {
+static int negaMax(Position& pos, int depth, int alpha=-1000000, int beta=1000000) {
     if (depth == 0)
     {
         pos.nnue.incremental_update();
         return pos.nnue.evaluation;
-    } 
-    int max = -10000000;
+    }
     MoveList moves = MoveList(pos);
     for (Move move : moves) {
         pos.move(move);
-        int score = -negaMax(pos, depth - 1);  // Calculate score only once
+        int score = -negaMax(pos, depth - 1, -beta, -alpha);
         pos.undoMove(move);
-        
-        if (score > max)  // Compare with previously stored max
+        if(score >= beta)
         {
-            max = score;
+            return beta;
+        }
+        if(score > alpha)
+        {
+            pos.gameStates.back().bestMove = move;
+            alpha = score;
         }
     }
-    return max;
+    return alpha;
 }

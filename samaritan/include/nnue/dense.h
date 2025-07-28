@@ -19,8 +19,8 @@ public:
     {
         assert(nodeCount != 0 && inputSize != 0);
 
-        std::fill(weights_.begin(), weights_.end(), .1f);
-        std::fill(biases_.begin(), biases_.end(), .1f);
+        std::fill(weights_.begin(), weights_.end(), 1.0f);
+        std::fill(biases_.begin(), biases_.end(), 1.0f);
     }
 
     void setWeights(const std::vector<T> &weights)
