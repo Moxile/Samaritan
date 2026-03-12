@@ -25,10 +25,15 @@ constexpr int board_table[] =
 class Accumulator
 {
 public:
-    static constexpr size_t FEATURE_COUNT = 3844;
+    static constexpr size_t FEATURE_COUNT = 160*4*6*160*4; // piece + king (Full KP)
 
     std::vector<float> input;
     std::vector<int> changes = {};
+
+    int perspective;
+
+    Accumulator() : perspective(0) {}
+    Accumulator(PieceColor turn) : perspective(__builtin_ctz((unsigned int)turn)) {}
 
     void reset()
     {
@@ -56,14 +61,27 @@ public:
             changes.erase(it);
         }
     }
+
+    constexpr int kingrelation(PieceColor kingcolor)
+    {
+        constexpr int relative_table[4][4] = {
+        //  RED  BLUE  YELLOW  GREEN
+        {  0,    2,     1,    3  },  // from RED's perspective
+        {  3,    0,     2,    1  },  // from BLUE's perspective
+        {  1,    3,     0,    2  },  // from YELLOW's perspective
+        {  2,    1,     3,    0  },  // from GREEN's perspective
+        };
+
+        return relative_table[perspective][__builtin_ctz((unsigned int)kingcolor)];
+    }
+
+    constexpr int get_board_feat(int loc, PieceType pie, PieceColor col, int king_loc, PieceColor king_color)
+    {
+        return kingrelation(king_color)                         * (160 * 160 * 6 * 4)
+            + board_table[king_loc]                 * (160 * 6 * 4)
+            + board_table[loc]                      * (6 * 4)
+            + pie                                   * 4
+            + kingrelation(col);
+    }           
+
 };
-
-constexpr int get_board_feat(int loc, PieceType pie, PieceColor col)
-{
-    return board_table[loc] * 4 * 6 + pie * 4 + __builtin_ctz((unsigned int)col);
-}
-
-constexpr int get_turn_feat(PieceColor col)
-{
-    return __builtin_ctz((unsigned int)col) + 3240;
-}

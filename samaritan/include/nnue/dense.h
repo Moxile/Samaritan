@@ -59,7 +59,7 @@ public:
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] += weights_[node + inputSize_*i];
+            output[i] += weights_[node * inputSize_ + i];
         }
     }
 
@@ -67,7 +67,7 @@ public:
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] -= weights_[node + inputSize_*i];
+            output[i] -= weights_[node * inputSize_ + i];
         }
     }
 };

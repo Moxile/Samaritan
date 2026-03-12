@@ -9,49 +9,59 @@ class NNUE
         DenseLayer<float> hidden;
         DenseLayer<float> output;
         int multiplier;
-        Accumulator accumulator;
+        Accumulator accumulators[4];
         int evaluation;
-        std::vector<float> hidden_output_;
+        std::vector<float> hidden_output_[4];
 
         NNUE(size_t hiddensize) : 
-            hidden(DenseLayer<float>(hiddensize, accumulator.FEATURE_COUNT)), 
+            hidden(DenseLayer<float>(hiddensize, Accumulator::FEATURE_COUNT)), 
             output(DenseLayer<float>(1, hiddensize)), multiplier(1000)
         {
-            accumulator = Accumulator();
-            accumulator.reset();
+            accumulators[0] = Accumulator(static_cast<PieceColor>(1));
+            accumulators[1] = Accumulator(static_cast<PieceColor>(2));
+            accumulators[2] = Accumulator(static_cast<PieceColor>(4));
+            accumulators[3] = Accumulator(static_cast<PieceColor>(8));
+            for (size_t i = 0; i < 4; ++i)
+                accumulators[i].reset();
         }
 
-        void init_eval()
+        void init_eval(PieceColor turn)
         {
             // get the eval
-            auto input = accumulator.input;
-            auto hidden_output = hidden.forward(input);
-            hidden_output_ = hidden_output;
-            for(size_t i = 0; i < hidden_output.size(); ++i) {
-                hidden_output[i] = ReLu(hidden_output[i]);
+            for(auto &accumulator : accumulators)
+            {
+                auto input = accumulator.input;
+                auto hidden_outputs = hidden.forward(input);
+                for(size_t i = 0; i < hidden_outputs.size(); ++i) {
+                    hidden_outputs[i] = ReLu(hidden_outputs[i]);
+                }
+                hidden_output_[accumulator.perspective] = hidden_outputs;
             }
-            auto output_value = output.forward(hidden_output);
+            auto output_value = output.forward(hidden_output_[__builtin_ctz((unsigned int)turn)]);
             evaluation = static_cast<int>(output_value[0] * multiplier);
         }
 
-        void incremental_update()
+        void incremental_update(PieceColor turn)
         {
-            for(const auto &change : accumulator.changes)
+            for(auto &accumulator : accumulators)
             {
-                if(accumulator.input[change] == 0)
+                for(const auto &change : accumulator.changes)
                 {
-                    accumulator.input[change] = 1;
-                    hidden.single_forward_add(hidden_output_, change);
+                    if(accumulator.input[change] == 0)
+                    {
+                        accumulator.input[change] = 1;
+                        hidden.single_forward_add(hidden_output_[accumulator.perspective], change);
+                    }
+                    else
+                    {
+                        accumulator.input[change] = 0;
+                        hidden.single_forward_rem(hidden_output_[accumulator.perspective], change);
+                    }
                 }
-                else
-                {
-                    accumulator.input[change] = 0;
-                    hidden.single_forward_rem(hidden_output_, change);
-                }
+                accumulator.changes.clear();
             }
-            accumulator.changes.clear();
 
-            auto output_value = output.forward(hidden_output_);
+            auto output_value = output.forward(hidden_output_[__builtin_ctz((unsigned int)turn)]);
             evaluation = static_cast<int>(output_value[0] * multiplier);
         }
 };

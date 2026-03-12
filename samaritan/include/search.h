@@ -4,7 +4,7 @@
 static int negaMax(Position& pos, int depth, int alpha=-1000000, int beta=1000000) {
     if (depth == 0)
     {
-        pos.nnue.incremental_update();
+        pos.nnue.incremental_update(pos.gameStates.back().curTurn);
         return pos.nnue.evaluation;
     }
     MoveList moves = MoveList(pos);

@@ -103,10 +103,31 @@ public:
 
     Position() : board(), nnue(10) {}
 
+    void refreshNNUE()
+    {
+        for (auto &acc : nnue.accumulators)
+            std::fill(acc.input.begin(), acc.input.end(), 0);
+        for (int sq = 0; sq < 224; sq++)
+        {
+            if (board.pieceMailbox[sq] == NONE_PIECE) continue;
+            for (auto &acc : nnue.accumulators)
+                for (int k = 0; k < 4; k++)
+                    if (board.kingTracker[k] != -1)
+                        acc.input[acc.get_board_feat(sq, board.pieceMailbox[sq], board.colorMailbox[sq], board.kingTracker[k], static_cast<PieceColor>(1 << k))] = 1;
+        }
+    }
+
     void move(const Move &move)
     {
         int loc = move.from();
         int destination = move.to();
+        PieceType movingPiece = board.pieceMailbox[loc];
+
+        auto setFeat = [&](int sq, PieceType pie, PieceColor col) {
+            for (auto &acc : nnue.accumulators)
+                for (int k = 0; k < 4; k++)
+                    acc.set(acc.get_board_feat(sq, pie, col, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
+        };
 
         // Create the new game state
         GameState state = GameState();
@@ -116,7 +137,13 @@ public:
         state.lastCapturedPieceColor = board.colorMailbox[destination];
         if(state.lastCapturedPiece != NONE_PIECE)
         {
-            nnue.accumulator.set(get_board_feat(destination, state.lastCapturedPiece, state.lastCapturedPieceColor));
+            for(auto &accumulator : nnue.accumulators)
+            {
+                for (int k = 0; k < 4; k++)
+                {
+                    accumulator.set(accumulator.get_board_feat(destination, state.lastCapturedPiece, state.lastCapturedPieceColor, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
+                }
+            }
         }
         std::memcpy(state.enpassants,
             gameStates.back().enpassants,
@@ -128,7 +155,7 @@ public:
         board.colorMailbox[destination] = board.colorMailbox[loc];
         board.pieceMailbox[loc] = NONE_PIECE;
         board.colorMailbox[loc] = NONE_COLOR;
-        
+
         auto special = move.special_move();
         // Handle Promotion
         if(special == 1 || special == 3)
@@ -147,8 +174,6 @@ public:
                     board.colorMailbox[217] = RED;
                     board.pieceMailbox[219] = NONE_PIECE;
                     board.colorMailbox[219] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(217, ROOK, RED));
-                    nnue.accumulator.set(get_board_feat(219, ROOK, RED));
                 }
                 else if (destination == 214)
                 {
@@ -156,8 +181,6 @@ public:
                     board.colorMailbox[215] = RED;
                     board.pieceMailbox[212] = NONE_PIECE;
                     board.colorMailbox[212] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(215, ROOK, RED));
-                    nnue.accumulator.set(get_board_feat(212, ROOK, RED));
                 }
                 break;
             case BLUE:
@@ -167,8 +190,6 @@ public:
                     board.colorMailbox[97] = BLUE;
                     board.pieceMailbox[49] = NONE_PIECE;
                     board.colorMailbox[49] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(97, ROOK, BLUE));
-                    nnue.accumulator.set(get_board_feat(49, ROOK, BLUE));
                 }
                 else if (destination == 145)
                 {
@@ -176,8 +197,6 @@ public:
                     board.colorMailbox[129] = BLUE;
                     board.pieceMailbox[161] = NONE_PIECE;
                     board.colorMailbox[161] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(29, ROOK, BLUE));
-                    nnue.accumulator.set(get_board_feat(161, ROOK, BLUE));
                 }
                 break;
             case YELLOW:
@@ -187,8 +206,6 @@ public:
                     board.colorMailbox[6] = YELLOW;
                     board.pieceMailbox[4] = NONE_PIECE;
                     board.colorMailbox[4] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(6, ROOK, YELLOW));
-                    nnue.accumulator.set(get_board_feat(4, ROOK, YELLOW));
                 }
                 else if (destination == 9)
                 {
@@ -196,8 +213,6 @@ public:
                     board.colorMailbox[8] = YELLOW;
                     board.pieceMailbox[11] = NONE_PIECE;
                     board.colorMailbox[11] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(8, ROOK, YELLOW));
-                    nnue.accumulator.set(get_board_feat(11, ROOK, YELLOW));
                 }
                 break;
             case GREEN:
@@ -207,8 +222,6 @@ public:
                     board.colorMailbox[94] = GREEN;
                     board.pieceMailbox[62] = NONE_PIECE;
                     board.colorMailbox[62] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(94, ROOK, GREEN));
-                    nnue.accumulator.set(get_board_feat(62, ROOK, GREEN));
                 }
                 else if (destination == 142)
                 {
@@ -216,8 +229,6 @@ public:
                     board.colorMailbox[126] = GREEN;
                     board.pieceMailbox[174] = NONE_PIECE;
                     board.colorMailbox[174] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(126, ROOK, GREEN));
-                    nnue.accumulator.set(get_board_feat(174, ROOK, GREEN));
                 }
                 break;
             }
@@ -290,22 +301,22 @@ public:
                 switch(board.colorMailbox[destination])
                 {
                     case RED:
-                        nnue.accumulator.set(get_board_feat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]));
+                        setFeat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]);
                         board.pieceMailbox[loc + NORTH] = NONE_PIECE;
                         board.colorMailbox[loc + NORTH] = NONE_COLOR;
                         break;
                     case BLUE:
-                        nnue.accumulator.set(get_board_feat(loc + EAST, PAWN, board.colorMailbox[loc + NORTH]));
+                        setFeat(loc + EAST, PAWN, board.colorMailbox[loc + EAST]);
                         board.pieceMailbox[loc + EAST] = NONE_PIECE;
                         board.colorMailbox[loc + EAST] = NONE_COLOR;
                         break;
                     case YELLOW:
-                        nnue.accumulator.set(get_board_feat(loc + SOUTH, PAWN, board.colorMailbox[loc + NORTH]));
+                        setFeat(loc + SOUTH, PAWN, board.colorMailbox[loc + SOUTH]);
                         board.pieceMailbox[loc + SOUTH] = NONE_PIECE;
                         board.colorMailbox[loc + SOUTH] = NONE_COLOR;
                         break;
                     case GREEN:
-                        nnue.accumulator.set(get_board_feat(loc + WEST, PAWN, board.colorMailbox[loc + NORTH]));
+                        setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
                         board.pieceMailbox[loc + WEST] = NONE_PIECE;
                         board.colorMailbox[loc + WEST] = NONE_COLOR;
                         break;
@@ -331,10 +342,16 @@ public:
             }
         }
 
-        nnue.accumulator.set(get_board_feat(loc, board.pieceMailbox[destination], board.colorMailbox[destination]));
-        nnue.accumulator.set(get_board_feat(destination, board.pieceMailbox[destination], board.colorMailbox[destination]));
-        nnue.accumulator.set(get_turn_feat(state.curTurn));
-        
+        if (board.pieceMailbox[destination] == KING)
+        {
+            refreshNNUE();
+            nnue.init_eval(state.curTurn);
+        }
+        else
+        {
+            setFeat(loc, movingPiece, board.colorMailbox[destination]);
+            setFeat(destination, board.pieceMailbox[destination], board.colorMailbox[destination]);
+        }
 
         gameStates.push_back(state);
     }
@@ -343,13 +360,22 @@ public:
     {
         int loc = move.from();
         int destination = move.to();
+        PieceType pieceAtDest = board.pieceMailbox[destination];
+        PieceColor colorAtDest = board.colorMailbox[destination];
+
+        auto setFeat = [&](int sq, PieceType pie, PieceColor col) {
+            for (auto &acc : nnue.accumulators)
+                for (int k = 0; k < 4; k++)
+                    acc.set(acc.get_board_feat(sq, pie, col, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
+        };
 
         // Restore the old piece position
         board.pieceMailbox[loc] = board.pieceMailbox[destination];
         board.colorMailbox[loc] = board.colorMailbox[destination];
         board.pieceMailbox[destination] = gameStates.back().lastCapturedPiece;
         board.colorMailbox[destination] = gameStates.back().lastCapturedPieceColor;
-        nnue.accumulator.set(get_board_feat(destination, gameStates.back().lastCapturedPiece, gameStates.back().lastCapturedPieceColor));
+        if (gameStates.back().lastCapturedPiece != NONE_PIECE)
+            setFeat(destination, gameStates.back().lastCapturedPiece, gameStates.back().lastCapturedPieceColor);
 
         // Restore promotion
         if (move.special_move() == 1 || move.special_move() == 3)
@@ -369,8 +395,6 @@ public:
                     board.colorMailbox[219] = RED;
                     board.pieceMailbox[217] = NONE_PIECE;
                     board.colorMailbox[217] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(217, ROOK, RED));
-                    nnue.accumulator.set(get_board_feat(219, ROOK, RED));
                 }
                 else if (destination == 214)
                 {
@@ -378,8 +402,6 @@ public:
                     board.colorMailbox[212] = RED;
                     board.pieceMailbox[215] = NONE_PIECE;
                     board.colorMailbox[215] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(212, ROOK, RED));
-                    nnue.accumulator.set(get_board_feat(215, ROOK, RED));
                 }
                 break;
             case BLUE:
@@ -389,8 +411,6 @@ public:
                     board.colorMailbox[49] = BLUE;
                     board.pieceMailbox[97] = NONE_PIECE;
                     board.colorMailbox[97] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(49, ROOK, BLUE));
-                    nnue.accumulator.set(get_board_feat(97, ROOK, BLUE));
                 }
                 else if (destination == 145)
                 {
@@ -398,8 +418,6 @@ public:
                     board.colorMailbox[161] = BLUE;
                     board.pieceMailbox[129] = NONE_PIECE;
                     board.colorMailbox[129] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(161, ROOK, BLUE));
-                    nnue.accumulator.set(get_board_feat(129, ROOK, BLUE));
                 }
                 break;
             case YELLOW:
@@ -409,8 +427,6 @@ public:
                     board.colorMailbox[4] = YELLOW;
                     board.pieceMailbox[6] = NONE_PIECE;
                     board.colorMailbox[6] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(4, ROOK, YELLOW));
-                    nnue.accumulator.set(get_board_feat(6, ROOK, YELLOW));
                 }
                 else if (destination == 9)
                 {
@@ -418,8 +434,6 @@ public:
                     board.colorMailbox[11] = YELLOW;
                     board.pieceMailbox[8] = NONE_PIECE;
                     board.colorMailbox[8] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(11, ROOK, YELLOW));
-                    nnue.accumulator.set(get_board_feat(8, ROOK, YELLOW));
                 }
                 break;
             case GREEN:
@@ -429,8 +443,6 @@ public:
                     board.colorMailbox[62] = GREEN;
                     board.pieceMailbox[94] = NONE_PIECE;
                     board.colorMailbox[94] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(62, ROOK, GREEN));
-                    nnue.accumulator.set(get_board_feat(94, ROOK, GREEN));
                 }
                 else if (destination == 142)
                 {
@@ -438,8 +450,6 @@ public:
                     board.colorMailbox[174] = GREEN;
                     board.pieceMailbox[126] = NONE_PIECE;
                     board.colorMailbox[126] = NONE_COLOR;
-                    nnue.accumulator.set(get_board_feat(174, ROOK, GREEN));
-                    nnue.accumulator.set(get_board_feat(126, ROOK, GREEN));
                 }
                 break;
             }
@@ -459,8 +469,9 @@ public:
                     else
                     {
                        board.pieceMailbox[loc + NORTH] = PAWN;
-                       board.colorMailbox[loc + NORTH] = GREEN; 
+                       board.colorMailbox[loc + NORTH] = GREEN;
                     }
+                    setFeat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]);
                     break;
                 case BLUE:
                     if(destination == loc + EAST + NORTH)
@@ -471,8 +482,9 @@ public:
                     else
                     {
                        board.pieceMailbox[loc + EAST] = PAWN;
-                       board.colorMailbox[loc + EAST] = RED;  
+                       board.colorMailbox[loc + EAST] = RED;
                     }
+                    setFeat(loc + EAST, PAWN, board.colorMailbox[loc + EAST]);
                     break;
                 case YELLOW:
                     if(destination == loc + SOUTH + WEST)
@@ -485,6 +497,7 @@ public:
                        board.pieceMailbox[loc + SOUTH] = PAWN;
                         board.colorMailbox[loc + SOUTH] = GREEN;
                     }
+                    setFeat(loc + SOUTH, PAWN, board.colorMailbox[loc + SOUTH]);
                     break;
                 case GREEN:
                     if(destination == loc + WEST + NORTH)
@@ -495,8 +508,9 @@ public:
                     else
                     {
                        board.pieceMailbox[loc + WEST] = PAWN;
-                        board.colorMailbox[loc + WEST] = RED; 
+                        board.colorMailbox[loc + WEST] = RED;
                     }
+                    setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
                     break;
             }
         }
@@ -505,8 +519,15 @@ public:
         if (board.pieceMailbox[loc] == KING)
             board.kingTracker[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))] = loc;
 
-        nnue.accumulator.set(get_board_feat(loc, board.pieceMailbox[destination], board.colorMailbox[destination]));
-        nnue.accumulator.set(get_board_feat(destination, board.pieceMailbox[destination], board.colorMailbox[destination]));
-        nnue.accumulator.set(get_turn_feat(gameStates.back().curTurn));
+        if (board.pieceMailbox[loc] == KING)
+        {
+            refreshNNUE();
+            nnue.init_eval(gameStates.back().curTurn);
+        }
+        else
+        {
+            setFeat(loc, board.pieceMailbox[loc], board.colorMailbox[loc]);
+            setFeat(destination, pieceAtDest, colorAtDest);
+        }
     }
 };
