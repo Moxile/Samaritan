@@ -4,6 +4,8 @@
 
 #include "position.h"
 
+constexpr int piece_values[7] = {0, 1 ,3, 3, 5, 9, 0};
+
 const int MAX_MOVES = 512;
 
 struct MoveList

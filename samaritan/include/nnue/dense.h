@@ -19,8 +19,8 @@ public:
     {
         assert(nodeCount != 0 && inputSize != 0);
 
-        std::fill(weights_.begin(), weights_.end(), 1.0f);
-        std::fill(biases_.begin(), biases_.end(), 1.0f);
+        std::fill(weights_.begin(), weights_.end(), 0.0f);
+        std::fill(biases_.begin(), biases_.end(), 0.0f);
     }
 
     void setWeights(const std::vector<T> &weights)
@@ -59,7 +59,7 @@ public:
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] += weights_[node * inputSize_ + i];
+            output[i] += weights_[node * nodeCount_ + i];
         }
     }
 
@@ -67,7 +67,51 @@ public:
     {
         for(size_t i = 0; i < output.size(); i++)
         {
-            output[i] -= weights_[node * inputSize_ + i];
+            output[i] -= weights_[node * nodeCount_ + i];
         }
     }
+};
+
+class AccumulatorLayer {
+    std::vector<int16_t> weights; // [Feature][Hidden]
+    std::vector<int16_t> biases; // [Hidden]
+    size_t hiddenSize;
+
+    public:
+    void add(std::vector<int32_t>& acc, int feature) {
+    for (size_t i = 0; i < hiddenSize; i++)
+        acc[i] += weights[feature * hiddenSize + i];
+    }
+
+    void rem(std::vector<int32_t>& acc, int feature) {
+        for (size_t i = 0; i < hiddenSize; i++)
+            acc[i] -= weights[feature * hiddenSize + i];
+    }
+
+    void refresh(std::vector<int32_t>& acc, const std::vector<uint8_t>& input) {
+        for (size_t i = 0; i < hiddenSize; i++)
+            acc[i] = biases[i];
+        for (size_t f = 0; f < input.size(); f++)
+            if (input[f])
+                add(acc, f);
+    }
+
+};
+
+class OutputLayer {
+    std::vector<int16_t> weights; // [Hidden]
+    int32_t bias;
+    static constexpr int QA = 255;
+    static constexpr int QB = 64;
+
+    public:
+    int32_t forward(const std::vector<int32_t>& acc) {
+        int32_t sum = bias;
+        for (size_t i = 0; i < weights.size(); i++) {
+            int32_t clipped = std::clamp((int32_t)acc[i], (int32_t)0, (int32_t)QA);
+            sum += clipped * weights[i];
+        }
+        return sum / (QA * QB);
+    }
+
 };

@@ -21,6 +21,9 @@ namespace samaritan
             // Position options
             std::string position_mode;
 
+            // Search options
+            int depth = 6;
+
             // Perft options
             int  perft_depth;
             bool perft_full;

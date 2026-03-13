@@ -27,8 +27,8 @@ class Accumulator
 public:
     static constexpr size_t FEATURE_COUNT = 160*4*6*160*4; // piece + king (Full KP)
 
-    std::vector<float> input;
-    std::vector<int> changes = {};
+    std::vector<uint8_t> input;
+    std::vector<uint16_t> changes = {};
 
     int perspective;
 
