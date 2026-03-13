@@ -1,8 +1,10 @@
 #pragma once
 
 #include "nnue/activation/ReLu.h"
+#include "nnue/simd.h"
 #include <stdexcept>
 #include <cassert>
+#include <random>
 
 template <typename T>
 class DenseLayer
@@ -78,17 +80,22 @@ class AccumulatorLayer {
     size_t hiddenSize;
 
     public:
-    void add(std::vector<int32_t>& acc, int feature) {
-    for (size_t i = 0; i < hiddenSize; i++)
-        acc[i] += weights[feature * hiddenSize + i];
+    AccumulatorLayer(size_t feature_count, size_t hidden_size) : hiddenSize(hidden_size), weights(feature_count * hidden_size), biases(hidden_size) {
+        std::mt19937 rng(42);
+        std::uniform_int_distribution<int16_t> dist(-10, 10);
+        for (auto& w : weights) w = dist(rng);
+        for (auto& b : biases)  b = dist(rng);
     }
 
-    void rem(std::vector<int32_t>& acc, int feature) {
-        for (size_t i = 0; i < hiddenSize; i++)
-            acc[i] -= weights[feature * hiddenSize + i];
+    void add(std::vector<int16_t>& acc, int feature) {
+        simd_add_i16(acc.data(), &weights[feature * hiddenSize], hiddenSize);
     }
 
-    void refresh(std::vector<int32_t>& acc, const std::vector<uint8_t>& input) {
+    void rem(std::vector<int16_t>& acc, int feature) {
+        simd_sub_i16(acc.data(), &weights[feature * hiddenSize], hiddenSize);
+    }
+
+    void refresh(std::vector<int16_t>& acc, const std::vector<uint8_t>& input) {
         for (size_t i = 0; i < hiddenSize; i++)
             acc[i] = biases[i];
         for (size_t f = 0; f < input.size(); f++)
@@ -105,7 +112,13 @@ class OutputLayer {
     static constexpr int QB = 64;
 
     public:
-    int32_t forward(const std::vector<int32_t>& acc) {
+    OutputLayer(size_t hidden_size) : weights(hidden_size), bias(0) {
+        std::mt19937 rng(42);
+        std::uniform_int_distribution<int16_t> dist(-100, 1000);
+        for (auto& w : weights) w = dist(rng);
+    }
+
+    int32_t forward(const std::vector<int16_t>& acc) {
         int32_t sum = bias;
         for (size_t i = 0; i < weights.size(); i++) {
             int32_t clipped = std::clamp((int32_t)acc[i], (int32_t)0, (int32_t)QA);

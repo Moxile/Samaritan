@@ -8,14 +8,13 @@ class NNUE
     public:
         AccumulatorLayer hidden;
         OutputLayer output;
-        int multiplier;
         Accumulator accumulators[4];
         int evaluation;
-        std::vector<int32_t> hidden_output_[4];
+        std::vector<int16_t> hidden_output_[4];
 
         NNUE(size_t hiddensize) : 
-            hidden(AccumulatorLayer()),
-            output(OutputLayer()), multiplier(1000)
+            hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT, hiddensize)),
+            output(OutputLayer(hiddensize))
         {
             accumulators[0] = Accumulator(static_cast<PieceColor>(1));
             accumulators[1] = Accumulator(static_cast<PieceColor>(2));
@@ -57,7 +56,7 @@ class NNUE
                 }
                 accumulator.changes.clear();
             }
-            
+
             evaluation = output.forward(hidden_output_[__builtin_ctz((unsigned int)turn)]);
         }
 };

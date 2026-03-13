@@ -77,7 +77,7 @@ public:
 
     constexpr int get_board_feat(int loc, PieceType pie, PieceColor col, int king_loc, PieceColor king_color)
     {
-        return kingrelation(king_color)                         * (160 * 160 * 6 * 4)
+        return kingrelation(king_color)             * (160 * 160 * 6 * 4)
             + board_table[king_loc]                 * (160 * 6 * 4)
             + board_table[loc]                      * (6 * 4)
             + pie                                   * 4
