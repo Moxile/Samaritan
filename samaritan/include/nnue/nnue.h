@@ -1,5 +1,8 @@
 #pragma once
 
+#include <fstream>
+#include <cmath>
+
 #include "nnue/dense.h"
 #include "nnue/accumulator.h"
 
@@ -27,6 +30,31 @@ class NNUE
                 accumulators[i].reset();
             }
         }
+
+        void loadWeights(const std::string& path) {
+            std::ifstream f(path, std::ios::binary);
+            if (!f) throw std::runtime_error("Cannot open weights: " + path);
+
+            char magic[4]; f.read(magic, 4);
+            if (std::string(magic, 4) != "NNUE") throw std::runtime_error("Bad magic");
+
+            int32_t version, hs;
+            f.read(reinterpret_cast<char*>(&version), 4);
+            f.read(reinterpret_cast<char*>(&hs), 4);
+
+            size_t l1_w = Accumulator::FEATURE_COUNT * hs;
+            std::vector<float> w(l1_w), b(hs), ow(hs);
+            float ob;
+
+            f.read(reinterpret_cast<char*>(w.data()),  l1_w * 4);
+            f.read(reinterpret_cast<char*>(b.data()),  hs   * 4);
+            f.read(reinterpret_cast<char*>(ow.data()), hs   * 4);
+            f.read(reinterpret_cast<char*>(&ob),       4);
+
+            hidden.loadFromFloats(w.data(), b.data());
+            output.loadFromFloats(ow.data(), ob);
+        }
+
 
         void init_eval(PieceColor turn)
         {

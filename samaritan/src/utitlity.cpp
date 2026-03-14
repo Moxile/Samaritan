@@ -138,18 +138,23 @@ const void fen_setBoard(Board &board, const std::string boardFEN)
                     break;
                 case 'N':
                     board.pieceMailbox[loc] = PieceType::KNIGHT;
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
                     break;
                 case 'B':
                     board.pieceMailbox[loc] = PieceType::BISHOP;
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
                     break;
                 case 'R':
                     board.pieceMailbox[loc] = PieceType::ROOK;
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
                     break;
                 case 'Q':
                     board.pieceMailbox[loc] = PieceType::QUEEN;
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
                     break;
                 case 'K':
                     board.pieceMailbox[loc] = PieceType::KING;
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
                     board.kingTracker[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))] = loc;
                     break;
                 default:

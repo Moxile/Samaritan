@@ -11,21 +11,58 @@ struct SearchInfo {
     long long nodes = 0;
 };
 
-static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alpha=-1000000, int beta=1000000) {
+static int qSearch(Position& pos, int ply, SearchInfo& info, int alpha, int beta)
+{
+    info.seldepth = std::max(info.seldepth, ply);
+    info.nodes++;
+    pos.nnue.incremental_update(pos.gameStates.back().curTurn);
+    int standPat = pos.nnue.evaluation;
+
+    if (standPat >= beta) return beta;
+    if (standPat > alpha) alpha = standPat;
+
+    MoveList moves = MoveList(pos);
+    for(auto move : moves)
+    {
+        if(move.gen_type != CAPTURES) continue;
+
+        pos.move(move);
+        int score = -qSearch(pos, ply+1, info, -beta, -alpha);
+        pos.undoMove(move);
+        if (score >= beta) return beta;
+        if (score > alpha) alpha = score;
+    }
+
+    return alpha;
+}
+
+static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alpha=-1000000, int beta=1000000, bool allowNullMove=true) {
     info.pv_length[ply] = 0;
     info.seldepth = std::max(info.seldepth, ply);
+    info.nodes++;
     if (depth == 0)
     {
-        info.nodes++;
-        pos.nnue.incremental_update(pos.gameStates.back().curTurn);
-        return pos.nnue.evaluation;
+        return qSearch(pos, ply, info, alpha, beta);
+        // pos.nnue.incremental_update(pos.gameStates.back().curTurn);
+        // return pos.nnue.evaluation;
     }
+
+    // null move pruning
+    if (depth >= 3 && allowNullMove && !inCheck(pos, pos.gameStates.back().curTurn) && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)pos.gameStates.back().curTurn)] > 1)
+    {
+       pos.makeNullMove();
+       int score = -negaMax(pos, depth - 3, ply + 1, info, -beta, -beta+1, false);
+       pos.undoNullMove();
+       if (score >= beta) return beta;
+    }
+
     MoveList moves = MoveList(pos);
     moves.sort();
     for (Move move : moves) {
         pos.move(move);
-        int score = -negaMax(pos, depth - 1, ply + 1, info, -beta, -alpha);
+        int score = -negaMax(pos, depth - 1, ply + 1, info, -beta, -alpha, true);
         pos.undoMove(move);
+
         if(score >= beta)
         {
             return beta;

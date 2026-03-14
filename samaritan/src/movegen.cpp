@@ -5,6 +5,7 @@ To add:
 */
 
 #include "movegen.h"
+#include <stdexcept>
 
 constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *moveList)
 {
@@ -60,6 +61,8 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
         if (pos.gameStates.back().enpassants[2] == loc + WEST + NORTH)
             rightEnPassant = true;
         break;
+    default:
+        throw std::runtime_error("Unknown color given");
     }
 
     // Create move for forward pawn move
@@ -407,6 +410,8 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             }
         }
         break;
+    default:
+        throw std::runtime_error("Unknown color given");
     }
 
     return moveList;

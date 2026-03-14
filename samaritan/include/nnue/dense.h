@@ -78,6 +78,8 @@ class AccumulatorLayer {
     std::vector<int16_t> biases; // [Hidden]
     size_t hiddenSize;
 
+    static constexpr int QA = 255;
+
     public:
     AccumulatorLayer(size_t feature_count, size_t hidden_size) : hiddenSize(hidden_size), weights(feature_count * hidden_size), biases(hidden_size) {
         std::mt19937 rng(42);
@@ -100,6 +102,13 @@ class AccumulatorLayer {
         for (size_t f = 0; f < input.size(); f++)
             if (input[f])
                 add(acc, f);
+    }
+
+    void loadFromFloats(const float* w, const float* b) {
+        for (size_t i =0; i < weights.size(); i++)
+            weights[i] = static_cast<int16_t>(std::round(w[i] * QA));
+        for (size_t i = 0; i < biases.size(); i++)
+            biases[i] = static_cast<int16_t>(std::round(b[i] * QA));
     }
 
 };
@@ -125,5 +134,12 @@ class OutputLayer {
         }
         return sum / (QA * QB);
     }
+
+    void loadFromFloats(const float* w, float b) {
+        for (size_t i = 0; i < weights.size(); i++)
+            weights[i] = static_cast<int16_t>(std::round(w[i] * QB));
+        bias = static_cast<int32_t>(std::round(b * QA * QB));
+    }
+
 
 };

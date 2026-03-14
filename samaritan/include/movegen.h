@@ -8,6 +8,8 @@ constexpr int piece_values[7] = {0, 1 ,3, 3, 5, 9, 0};
 
 const int MAX_MOVES = 512;
 
+bool inCheck(const Position &pos, PieceColor color);
+
 struct MoveList
 {
     explicit MoveList(Position pos);

@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstring>
 #include <iostream>
+#include <stdexcept>
 
 #include "chess.h"
 #include "nnue/nnue.h"
@@ -13,6 +14,7 @@ public:
     PieceColor colorMailbox[224];
     PieceType pieceMailbox[224];
     int kingTracker[4] = {-1, -1, -1, -1};
+    int nonPawnPieceCount[4] = {0, 0, 0, 0};
 
     Board()
     {
@@ -101,7 +103,7 @@ public:
     std::vector<GameState> gameStates;
     NNUE nnue;
 
-    Position() : board(), nnue(10) {}
+    Position() : board(), nnue(16) {}
 
     void refreshNNUE()
     {
@@ -115,6 +117,26 @@ public:
                     if (board.kingTracker[k] != -1)
                         acc.input[acc.get_board_feat(sq, board.pieceMailbox[sq], board.colorMailbox[sq], board.kingTracker[k], static_cast<PieceColor>(1 << k))] = 1;
         }
+    }
+
+    void makeNullMove()
+    {
+        GameState state = GameState();
+        state.castleRights = gameStates.back().castleRights;
+        state.curTurn = gameStates.back().curTurn;
+        state.curTurn++;
+
+        // en passant
+        std::memcpy(state.enpassants,
+            gameStates.back().enpassants,
+            sizeof(state.enpassants));
+        state.enpassants[__builtin_ctz((unsigned int)state.curTurn)] = -1;
+        gameStates.push_back(state);
+    }
+
+    void undoNullMove()
+    {
+        gameStates.pop_back();
     }
 
     void move(const Move &move)
@@ -144,11 +166,17 @@ public:
                     accumulator.set(accumulator.get_board_feat(destination, state.lastCapturedPiece, state.lastCapturedPieceColor, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
                 }
             }
+
+            // for null move pruning
+            if(state.lastCapturedPiece != PAWN)
+            {
+                board.nonPawnPieceCount[__builtin_ctz((unsigned int) state.lastCapturedPieceColor)]--;
+            }
         }
         std::memcpy(state.enpassants,
             gameStates.back().enpassants,
             sizeof(state.enpassants));
-        state.enpassants[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))] = -1;
+        state.enpassants[__builtin_ctz((unsigned int)state.curTurn)] = -1;
 
         // Move the piece
         board.pieceMailbox[destination] = board.pieceMailbox[loc];
@@ -231,6 +259,8 @@ public:
                     board.colorMailbox[174] = NONE_COLOR;
                 }
                 break;
+            default:
+                throw std::runtime_error("Unknown color given");
             }
         }
 
@@ -255,6 +285,8 @@ public:
                 state.castleRights = gameStates.back().castleRights & ~GREEN_CASTLING;
                 board.kingTracker[3] = destination;
                 break;
+            default:
+                throw std::runtime_error("Unknown color given");
             }
         }
         // Update castling right when rook is moved
@@ -291,6 +323,8 @@ public:
                 else if (rook == 174)
                     state.castleRights = gameStates.back().castleRights & ~GREEN_OOO;
                 break;
+            default:
+                    throw std::runtime_error("Unknown color given");
             }
         }
         // Handle en passant
@@ -320,6 +354,8 @@ public:
                         board.pieceMailbox[loc + WEST] = NONE_PIECE;
                         board.colorMailbox[loc + WEST] = NONE_COLOR;
                         break;
+                    default:
+                        throw std::runtime_error("Unknown color given");
                 }
             }
             else
@@ -375,8 +411,15 @@ public:
         board.pieceMailbox[destination] = gameStates.back().lastCapturedPiece;
         board.colorMailbox[destination] = gameStates.back().lastCapturedPieceColor;
         if (gameStates.back().lastCapturedPiece != NONE_PIECE)
+        {
             setFeat(destination, gameStates.back().lastCapturedPiece, gameStates.back().lastCapturedPieceColor);
 
+            // for null move pruning
+            if(gameStates.back().lastCapturedPiece != PAWN)
+            {
+                board.nonPawnPieceCount[__builtin_ctz((unsigned int) gameStates.back().lastCapturedPieceColor)]++;
+            }
+        }
         // Restore promotion
         if (move.special_move() == 1 || move.special_move() == 3)
         {
@@ -452,6 +495,9 @@ public:
                     board.colorMailbox[126] = NONE_COLOR;
                 }
                 break;
+            
+            default:
+                throw std::runtime_error("Unknown color given");
             }
         }
 
@@ -512,6 +558,8 @@ public:
                     }
                     setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
                     break;
+                default:
+                    throw std::runtime_error("Unknown color given");
             }
         }
 
