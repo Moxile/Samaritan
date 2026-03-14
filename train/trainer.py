@@ -4,6 +4,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 import time
+import struct
+import numpy as np
 
 FEATURE_COUNT = 160*6*4*160*4
 HIDDEN_SIZE = 64
@@ -38,6 +40,25 @@ COLOR_IDX = {'r': 0, 'b': 1, 'y': 2, 'g': 3}
 PIECE_IDX = {'P': 1, 'N': 2, 'B': 3, 'R': 4, 'Q': 5, 'K': 6}
 TURN_IDX  = {'R': 0, 'B': 1, 'Y': 2, 'G': 3}
 
+def save_weights(model, path):
+    with open(path, 'wb') as f:
+        f.write(b'NNUE')
+        f.write(struct.pack('<i', 1))            # version
+        f.write(struct.pack('<i', HIDDEN_SIZE))  # hidden size
+
+        # L1 weights [FEATURE_COUNT, HIDDEN_SIZE]
+        w = model.hidden.weight.detach().cpu().numpy().flatten().astype('float32')
+        f.write(w.tobytes())
+
+        # L1 biases — EmbeddingBag has none, write zeros
+        f.write(np.zeros(HIDDEN_SIZE, dtype='float32').tobytes())
+
+        # L2 weights [HIDDEN_SIZE]
+        ow = model.output.weight.detach().cpu().numpy().flatten().astype('float32')
+        f.write(ow.tobytes())
+
+        # L2 bias — scalar
+        f.write(struct.pack('<f', model.output.bias.detach().cpu().item()))
 
 def fen_to_features(fen):
     parts       = fen.split('-')
@@ -140,3 +161,6 @@ for epoch in range(epochs):
 
     
     print(f"Epoch {epoch+1}, Loss: {loss.item():.4f}, Time: {time.time()-t0:.1f}s")
+
+
+save_weights(model, 'model.bin')
