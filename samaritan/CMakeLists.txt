@@ -34,16 +34,14 @@ target_compile_options(samaritan PRIVATE ${COMMON_COMPILE_OPTIONS})
 target_link_libraries(samaritan PRIVATE samaritan_lib)
 
 # Tests
-add_executable(dense_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/dense.cc")
-target_include_directories(dense_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_compile_options(dense_test PRIVATE ${COMMON_COMPILE_OPTIONS})
-target_link_libraries(dense_test PRIVATE    
-    samaritan_lib 
-    GTest::gtest 
-    GTest::gtest_main
+add_executable(nnue_bench "${CMAKE_CURRENT_SOURCE_DIR}/tests/nnue.cc")
+target_include_directories(nnue_bench PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_compile_options(nnue_bench PRIVATE ${COMMON_COMPILE_OPTIONS})
+target_link_libraries(nnue_bench PRIVATE
+    samaritan_lib
     benchmark::benchmark
 )
-add_test(NAME dense_test COMMAND dense_test)
+
 
 # Install rules
 install(TARGETS samaritan samaritan_lib
