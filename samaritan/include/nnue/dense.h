@@ -39,7 +39,7 @@ public:
 
     std::vector<T> forward(const std::vector<T> &input) const
     {
-        assert(input.size() != inputSize_);
+        assert(input.size() == inputSize_);
 
         std::vector<T> output(nodeCount_);
 

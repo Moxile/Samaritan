@@ -16,6 +16,7 @@ class NNUE
             hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT, hiddensize)),
             output(OutputLayer(hiddensize))
         {
+            assert(hiddenSize % 16 == 0);
             accumulators[0] = Accumulator(static_cast<PieceColor>(1));
             accumulators[1] = Accumulator(static_cast<PieceColor>(2));
             accumulators[2] = Accumulator(static_cast<PieceColor>(4));

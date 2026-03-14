@@ -50,7 +50,7 @@ namespace samaritan
         auto* goCommand = app.add_subcommand("go", "COMPLETE")
         ->callback([this]() { handleGo(); });
 
-        goCommand->add_option("depth", depth, "Search depth")->default_val(6);
+        goCommand->allow_extras();
 
         auto* stopCommand = app.add_subcommand("stop", "COMPLETE")
         ->callback([this]() { handleStop(); });
@@ -156,6 +156,13 @@ namespace samaritan
 
     void Engine::handleGo()
     {
+        const auto& extras = app.get_subcommand("go")->remaining();
+        depth = 6;
+        for (size_t i = 0; i + 1 < extras.size(); i++) {
+            if (extras[i] == "depth")
+                depth = std::stoi(extras[i + 1]);
+        }
+
         pos.nnue.init_eval(pos.gameStates.back().curTurn);
         SearchInfo info = iterativeDeepening(pos, depth);
         std::cout << "bestmove " << info.pv_table[0][0].toUCI() << std::endl;
