@@ -13,7 +13,6 @@ struct SearchInfo {
 
 static int qSearch(Position& pos, int ply, SearchInfo& info, int alpha, int beta)
 {
-    info.seldepth = std::max(info.seldepth, ply);
     info.nodes++;
     pos.nnue.incremental_update(pos.gameStates.back().curTurn);
     int standPat = pos.nnue.evaluation;

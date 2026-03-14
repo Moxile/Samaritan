@@ -1,3 +1,5 @@
 .vscode
 /samaritan/build/
 /train/.venv/
+/train/model.bin
+/samaritan/include/nnue/models

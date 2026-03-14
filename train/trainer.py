@@ -8,7 +8,7 @@ import struct
 import numpy as np
 
 FEATURE_COUNT = 160*6*4*160*4
-HIDDEN_SIZE = 64
+HIDDEN_SIZE = 16
 
 # Copied from accumulator.h — maps mailbox location to board index (0-159), -1 = invalid
 board_table = [

@@ -15,22 +15,6 @@ class NNUE
         int evaluation;
         std::vector<int16_t> hidden_output_[4];
 
-        NNUE(size_t hiddensize) : 
-            hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT, hiddensize)),
-            output(OutputLayer(hiddensize))
-        {
-            assert(hiddenSize % 16 == 0);
-            accumulators[0] = Accumulator(static_cast<PieceColor>(1));
-            accumulators[1] = Accumulator(static_cast<PieceColor>(2));
-            accumulators[2] = Accumulator(static_cast<PieceColor>(4));
-            accumulators[3] = Accumulator(static_cast<PieceColor>(8));
-            for (size_t i = 0; i < 4; ++i)
-            {
-                hidden_output_[i].resize(hiddensize, 0);
-                accumulators[i].reset();
-            }
-        }
-
         void loadWeights(const std::string& path) {
             std::ifstream f(path, std::ios::binary);
             if (!f) throw std::runtime_error("Cannot open weights: " + path);
@@ -53,6 +37,25 @@ class NNUE
 
             hidden.loadFromFloats(w.data(), b.data());
             output.loadFromFloats(ow.data(), ob);
+        }
+
+        NNUE(size_t hiddensize) : 
+            hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT, hiddensize)),
+            output(OutputLayer(hiddensize))
+        {
+            assert(hiddenSize % 16 == 0);
+
+            loadWeights("./include/nnue/models/model.bin");
+
+            accumulators[0] = Accumulator(static_cast<PieceColor>(1));
+            accumulators[1] = Accumulator(static_cast<PieceColor>(2));
+            accumulators[2] = Accumulator(static_cast<PieceColor>(4));
+            accumulators[3] = Accumulator(static_cast<PieceColor>(8));
+            for (size_t i = 0; i < 4; ++i)
+            {
+                hidden_output_[i].resize(hiddensize, 0);
+                accumulators[i].reset();
+            }
         }
 
 
