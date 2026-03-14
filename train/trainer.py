@@ -119,6 +119,9 @@ class NNUE(nn.Module):
 
 
 model = NNUE()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using: ", device)
+model = model.to(device)
 print(model)
 
 criterion = nn.MSELoss()
@@ -153,6 +156,7 @@ epochs = 3
 for epoch in range(epochs):
     t0 = time.time()
     for features, offsets, target in loader:
+        features, offsets, target = features.to(device), offsets.to(device), target.to(device)
         optimizer.zero_grad()
         outputs = model(features, offsets)
         loss = criterion(outputs, target)
