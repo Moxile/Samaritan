@@ -74,29 +74,29 @@
 // };
 
 class AccumulatorLayer {
-    std::vector<int16_t> weights; // [Feature][Hidden]
-    std::vector<int16_t> biases; // [Hidden]
+    std::vector<int16_t, AlignedAllocator<int16_t, 64>> weights; // [Feature][Hidden]
+    std::vector<int16_t, AlignedAllocator<int16_t, 64>> biases; // [Hidden]
     size_t hiddenSize;
 
     static constexpr int QA = 255;
 
     public:
-    AccumulatorLayer(size_t feature_count, size_t hidden_size) : hiddenSize(hidden_size), weights(feature_count * hidden_size), biases(hidden_size) {
+    AccumulatorLayer(size_t feature_count, size_t hidden_size) : hiddenSize(hidden_size), weights(feature_count * hidden_size, 0), biases(hidden_size, 0) {
         std::mt19937 rng(42);
-        std::uniform_int_distribution<int16_t> dist(-10, 10);
+        std::uniform_int_distribution<int16_t> dist(-10, 200);
         for (auto& w : weights) w = dist(rng);
         for (auto& b : biases)  b = dist(rng);
     }
 
-    void add(std::vector<int16_t>& acc, int feature) {
+    void add(AlignedVec16& acc, int feature) {
         simd_add_i16(acc.data(), &weights[feature * hiddenSize], hiddenSize);
     }
 
-    void rem(std::vector<int16_t>& acc, int feature) {
+    void rem(AlignedVec16& acc, int feature) {
         simd_sub_i16(acc.data(), &weights[feature * hiddenSize], hiddenSize);
     }
 
-    void refresh(std::vector<int16_t>& acc, const std::vector<uint8_t>& input) {
+    void refresh(AlignedVec16& acc, const AlignedVec8& input) {
         for (size_t i = 0; i < hiddenSize; i++)
             acc[i] = biases[i];
         for (size_t f = 0; f < input.size(); f++)
@@ -114,7 +114,7 @@ class AccumulatorLayer {
 };
 
 class OutputLayer {
-    std::vector<int16_t> weights; // [Hidden]
+    std::vector<int16_t, AlignedAllocator<int16_t, 64>> weights; // [Hidden]
     int32_t bias;
     static constexpr int QA = 255;
     static constexpr int QB = 64;
@@ -122,11 +122,11 @@ class OutputLayer {
     public:
     OutputLayer(size_t hidden_size) : weights(hidden_size), bias(0) {
         std::mt19937 rng(42);
-        std::uniform_int_distribution<int16_t> dist(-100, 1000);
+        std::uniform_int_distribution<int16_t> dist(-100, 200);
         for (auto& w : weights) w = dist(rng);
     }
 
-    int32_t forward(const std::vector<int16_t>& acc) {
+    int32_t forward(const AlignedVec16& acc) {
         int32_t sum = bias;
         for (size_t i = 0; i < weights.size(); i++) {
             int32_t clipped = std::clamp((int32_t)acc[i], (int32_t)0, (int32_t)QA);

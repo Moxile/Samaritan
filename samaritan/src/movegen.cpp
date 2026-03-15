@@ -105,22 +105,22 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             {
                 *moveList++ = Move(loc + offsets[offset][1], loc, QUEEN, 0);
                 moveList->gen_type = QUEEN_PROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[QUEEN];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[QUEEN];
                 *moveList++ = Move(loc + offsets[offset][1], loc, ROOK, 0);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[ROOK];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[ROOK];
                 *moveList++ = Move(loc + offsets[offset][1], loc, BISHOP, 0);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[BISHOP];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[BISHOP];
                 *moveList++ = Move(loc + offsets[offset][1], loc, KNIGHT, 0);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[KNIGHT];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[KNIGHT];
             }
             else
             {
                 *moveList++ = Move(loc + offsets[offset][1], loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - piece_values[PAWN];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - piece_values[PAWN];
             }
         }
         else if (rightEnPassant)
@@ -129,22 +129,22 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             {
                 *moveList++ = Move(loc + offsets[offset][1], loc, QUEEN, 3);
                 moveList->gen_type = QUEEN_PROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[QUEEN];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[QUEEN];
                 *moveList++ = Move(loc + offsets[offset][1], loc, ROOK, 3);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[ROOK];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[ROOK];
                 *moveList++ = Move(loc + offsets[offset][1], loc, BISHOP, 3);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[BISHOP];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[BISHOP];
                 *moveList++ = Move(loc + offsets[offset][1], loc, KNIGHT, 3);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[KNIGHT];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[KNIGHT];
             }
             else
             {
                 *moveList++ = Move(loc + offsets[offset][1], loc, 0, 2);
                 moveList->gen_type = CAPTURES;
-                moveList->value = piece_values[PAWN] - piece_values[PAWN];
+                moveList->value = 10*piece_values[PAWN] - piece_values[PAWN];
             }
         }
     }
@@ -158,22 +158,22 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             {
                 *moveList++ = Move(loc + offsets[offset][2], loc, QUEEN, 0);
                 moveList->gen_type = QUEEN_PROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[QUEEN];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[QUEEN];
                 *moveList++ = Move(loc + offsets[offset][2], loc, ROOK, 0);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[ROOK];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[ROOK];
                 *moveList++ = Move(loc + offsets[offset][2], loc, BISHOP, 0);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[BISHOP];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[BISHOP];
                 *moveList++ = Move(loc + offsets[offset][2], loc, KNIGHT, 0);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[KNIGHT];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[KNIGHT];
             }
             else
             {
                 *moveList++ = Move(loc + offsets[offset][2], loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - piece_values[PAWN];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - piece_values[PAWN];
             }
         }
         else if (leftEnPassant)
@@ -182,22 +182,22 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             {
                 *moveList++ = Move(loc + offsets[offset][2], loc, QUEEN, 3);
                 moveList->gen_type = QUEEN_PROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[QUEEN];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[QUEEN];
                 *moveList++ = Move(loc + offsets[offset][2], loc, ROOK, 3);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[ROOK];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[ROOK];
                 *moveList++ = Move(loc + offsets[offset][2], loc, BISHOP, 3);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[BISHOP];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[BISHOP];
                 *moveList++ = Move(loc + offsets[offset][2], loc, KNIGHT, 3);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = piece_values[PAWN] - 1 + piece_values[KNIGHT];
+                moveList->value = 10*piece_values[PAWN] - 1 + piece_values[KNIGHT];
             }
             else
             {
                 *moveList++ = Move(loc + offsets[offset][2], loc, 0, 2);
                 moveList->gen_type = CAPTURES;
-                moveList->value = piece_values[PAWN] - piece_values[PAWN];
+                moveList->value = 10*piece_values[PAWN] - piece_values[PAWN];
             }
         }
     }
@@ -225,7 +225,7 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
             {
                 *moveList++ = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = piece_values[pos.board.pieceMailbox[move]] - piece_values[KNIGHT];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[move]] - piece_values[KNIGHT];
             }
         }
     }
@@ -246,7 +246,7 @@ constexpr ExtMove *getStraightLineMoves(const Position &pos, const int loc, ExtM
         {
             *moveList++ = Move(destination, loc, 0, 0);
             moveList->gen_type = CAPTURES;
-            moveList->value = piece_values[pos.board.pieceMailbox[destination]] - piece_values[pos.board.pieceMailbox[loc]];
+            moveList->value = 10*piece_values[pos.board.pieceMailbox[destination]] - piece_values[pos.board.pieceMailbox[loc]];
             break;
         }
         else
@@ -302,7 +302,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 *moveList++ = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = piece_values[pos.board.pieceMailbox[move]] - piece_values[KING];
+                moveList->value = 10*piece_values[pos.board.pieceMailbox[move]] - piece_values[KING];
             }
         }
     }

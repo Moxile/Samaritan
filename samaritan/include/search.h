@@ -2,7 +2,8 @@
 #include "movegen.h"
 #include <chrono>
 
-static constexpr int MAX_PLY = 64;
+static constexpr int MAX_PLY = 30;
+static Move killermoves[MAX_PLY][2];
 
 struct SearchInfo {
     Move pv_table[MAX_PLY][MAX_PLY];
@@ -46,8 +47,11 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
         // return pos.nnue.evaluation;
     }
 
+    PieceColor curTurn = pos.gameStates.back().curTurn;
+    bool check = inCheck(pos, curTurn);
+
     // null move pruning
-    if (depth >= 3 && allowNullMove && !inCheck(pos, pos.gameStates.back().curTurn) && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)pos.gameStates.back().curTurn)] > 1)
+    if (depth >= 3 && allowNullMove && !check && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)pos.gameStates.back().curTurn)] > 1)
     {
        pos.makeNullMove();
        int score = -negaMax(pos, depth - 3, ply + 1, info, -beta, -beta+1, false);
@@ -56,14 +60,40 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
     }
 
     MoveList moves = MoveList(pos);
+
+    // TODO: move later to a better place to prevent iterating through all again (or add )
+    // apply move scores like TT, Killermoves, History, ...
+    for(ExtMove& move : moves)
+    {
+
+        // killer moves
+        if(killermoves[ply][0] == move)
+        {
+            move.value += 500;
+        }
+        if(killermoves[ply][1] == move)
+        {
+            move.value += 500;
+        }
+    }
+
     moves.sort();
-    for (Move move : moves) {
+
+
+    for (ExtMove move : moves) {
         pos.move(move);
+        bool givesCheck = inCheck(pos, curTurn+1) || inCheck(pos, curTurn+3);
         int score = -negaMax(pos, depth - 1, ply + 1, info, -beta, -alpha, true);
         pos.undoMove(move);
 
         if(score >= beta)
         {
+            // killer moves
+            if(move.gen_type == QUIETS && killermoves[ply][0] != move && killermoves[ply][1] != move)
+            {
+                killermoves[ply][1] = killermoves[ply][0];
+                killermoves[ply][0] = move;
+            }
             return beta;
         }
         if(score > alpha)
@@ -82,6 +112,10 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
 static SearchInfo iterativeDeepening(Position& pos, int maxDepth) {
     SearchInfo info;
     auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < MAX_PLY; i++)
+    {
+        killermoves[i][0] = killermoves[i][1] = Move(0, 0, 0, 0);
+    }
 
     for (int depth = 1; depth <= maxDepth; depth++) {
         info.pv_length[0] = 0;

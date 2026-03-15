@@ -13,7 +13,7 @@ class NNUE
         OutputLayer output;
         Accumulator accumulators[4];
         int evaluation;
-        std::vector<int16_t> hidden_output_[4];
+        std::vector<int16_t, AlignedAllocator<int16_t, 64>> hidden_output_[4];
 
         void loadWeights(const std::string& path) {
             std::ifstream f(path, std::ios::binary);
@@ -43,9 +43,9 @@ class NNUE
             hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT, hiddensize)),
             output(OutputLayer(hiddensize))
         {
-            assert(hiddenSize % 16 == 0);
+            assert(hiddensize % 16 == 0);
 
-            loadWeights("./include/nnue/models/model.bin");
+            //loadWeights("./include/nnue/models/model.bin");
 
             accumulators[0] = Accumulator(static_cast<PieceColor>(1));
             accumulators[1] = Accumulator(static_cast<PieceColor>(2));

@@ -91,6 +91,18 @@ constexpr PieceColor operator++(PieceColor& color, int)
     return oldColor; // Return the old value
 }
 
+constexpr PieceColor operator+(PieceColor color, int n)
+{
+    int index = 0;
+
+    int value = static_cast<int>(color);
+    while (value >>= 1) ++index;
+
+    index = (index + n) % 4;
+
+    return static_cast<PieceColor>(1 << index);
+}
+
 
 enum CastlingRights
 {
@@ -134,6 +146,7 @@ constexpr char files[14] = {'a',  'b',  'c',  'd',  'e',  'f', 'g', 'h', 'i', 'j
 
 class Move
 {
+    // Stockfish note
     // A move needs 32 bits to be stored
     //
     // bit  0- 8: destination square (from 0 to 63)
