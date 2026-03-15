@@ -3,3 +3,4 @@
 /train/.venv/
 /train/model.bin
 /samaritan/include/nnue/models
+/samaritan/selfplay.txt

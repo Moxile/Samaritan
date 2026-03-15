@@ -29,3 +29,5 @@ const void fen_setCastlingRights(GameState &state, const std::string castling, c
 const void fen_setBoard(Board &board, const std::string boardFEN);
 
 void print(Position &pos);
+
+std::string positionToFEN(const Position &pos);

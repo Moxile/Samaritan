@@ -49,6 +49,17 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
 
     PieceColor curTurn = pos.gameStates.back().curTurn;
     bool check = inCheck(pos, curTurn);
+    MoveList moves = MoveList(pos);
+
+    // check for mate or stalemate
+    if(moves.size() == 0)
+    {
+        if(check)
+        {
+            return -999999 + ply;
+        }
+        return 0;
+    }
 
     // null move pruning
     if (depth >= 3 && allowNullMove && !check && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)pos.gameStates.back().curTurn)] > 1)
@@ -58,8 +69,6 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
        pos.undoNullMove();
        if (score >= beta) return beta;
     }
-
-    MoveList moves = MoveList(pos);
 
     // TODO: move later to a better place to prevent iterating through all again (or add )
     // apply move scores like TT, Killermoves, History, ...
@@ -80,7 +89,7 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
     moves.sort();
 
 
-    for (ExtMove move : moves) {
+    for (ExtMove& move : moves) {
         pos.move(move);
         bool givesCheck = inCheck(pos, curTurn+1) || inCheck(pos, curTurn+3);
         int score = -negaMax(pos, depth - 1, ply + 1, info, -beta, -alpha, true);
@@ -109,7 +118,7 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
     return alpha;
 }
 
-static SearchInfo iterativeDeepening(Position& pos, int maxDepth) {
+static SearchInfo iterativeDeepening(Position& pos, int maxDepth, bool silent = false) {
     SearchInfo info;
     auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < MAX_PLY; i++)
@@ -128,16 +137,18 @@ static SearchInfo iterativeDeepening(Position& pos, int maxDepth) {
         long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
         long long nps = ms > 0 ? info.nodes * 1000 / ms : 0;
 
-        std::cout << "info depth " << depth
-                  << " time " << ms
-                  << " seldepth " << info.seldepth
-                  << " nodes " << info.nodes
-                  << " pv ";
-        for (int i = 0; i < info.pv_length[0]; i++)
-            std::cout << info.pv_table[0][i].toUCI() << " ";
-        std::cout << "score " << score
-                  << " nps " << nps
-                  << std::endl;
+        if (!silent) {
+            std::cout << "info depth " << depth
+                      << " time " << ms
+                      << " seldepth " << info.seldepth
+                      << " nodes " << info.nodes
+                      << " pv ";
+            for (int i = 0; i < info.pv_length[0]; i++)
+                std::cout << info.pv_table[0][i].toUCI() << " ";
+            std::cout << "score " << score
+                      << " nps " << nps
+                      << std::endl;
+        }
     }
 
     return info;

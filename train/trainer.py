@@ -1,3 +1,4 @@
+import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -39,6 +40,34 @@ relative_table = [
 COLOR_IDX = {'r': 0, 'b': 1, 'y': 2, 'g': 3}
 PIECE_IDX = {'P': 1, 'N': 2, 'B': 3, 'R': 4, 'Q': 5, 'K': 6}
 TURN_IDX  = {'R': 0, 'B': 1, 'Y': 2, 'G': 3}
+
+def load_weights(model, path):
+    with open(path, 'rb') as f:
+        magic = f.read(4)
+        if magic != b'NNUE':
+            raise ValueError(f"Not a valid NNUE model file: {path}")
+        version     = struct.unpack('<i', f.read(4))[0]
+        hidden_size = struct.unpack('<i', f.read(4))[0]
+        if hidden_size != HIDDEN_SIZE:
+            raise ValueError(f"Model hidden size {hidden_size} doesn't match HIDDEN_SIZE={HIDDEN_SIZE}")
+
+        # L1 weights [FEATURE_COUNT, HIDDEN_SIZE]
+        w = np.frombuffer(f.read(FEATURE_COUNT * hidden_size * 4), dtype='float32')
+        model.hidden.weight.data = torch.from_numpy(w.reshape(FEATURE_COUNT, hidden_size))
+
+        # L1 biases (written as zeros, skip)
+        f.read(hidden_size * 4)
+
+        # L2 weights [HIDDEN_SIZE]
+        ow = np.frombuffer(f.read(hidden_size * 4), dtype='float32')
+        model.output.weight.data = torch.from_numpy(ow.reshape(1, hidden_size))
+
+        # L2 bias
+        ob = struct.unpack('<f', f.read(4))[0]
+        model.output.bias.data = torch.tensor([ob])
+
+    print(f"Loaded weights from {path}")
+
 
 def save_weights(model, path):
     with open(path, 'wb') as f:
@@ -118,14 +147,28 @@ class NNUE(nn.Module):
         return x
 
 
+parser = argparse.ArgumentParser(description="Train the Samaritan NNUE")
+parser.add_argument("--data",   default="trainsample.txt", help="Training data file (FEN;score lines)")
+parser.add_argument("--output", default="model.bin",       help="Output weights file")
+parser.add_argument("--load",   default=None,              help="Optional: load existing weights to continue training")
+parser.add_argument("--epochs", type=int, default=3,       help="Number of training epochs")
+parser.add_argument("--lr",     type=float, default=0.001, help="Learning rate")
+args = parser.parse_args()
+
 model = NNUE()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using: ", device)
 model = model.to(device)
 print(model)
 
+if args.load is not None:
+    load_weights(model, args.load)
+    model = model.to(device)
+
+WDL_K = 1.0 / 400.0  # sigmoid(800 * WDL_K) ≈ 0.88 win probability at 800cp advantage
+
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 
 class Positions(torch.utils.data.Dataset):
@@ -149,22 +192,21 @@ def collate_fn(batch):
     return torch.cat(features_list), offsets, torch.stack(targets).unsqueeze(1)
 
 
-dataset = Positions("trainsample.txt")
+dataset = Positions(args.data)
 loader  = DataLoader(dataset, batch_size=256, shuffle=True, collate_fn=collate_fn)
 
-epochs = 3
-for epoch in range(epochs):
+for epoch in range(args.epochs):
     t0 = time.time()
     for features, offsets, target in loader:
         features, offsets, target = features.to(device), offsets.to(device), target.to(device)
         optimizer.zero_grad()
         outputs = model(features, offsets)
-        loss = criterion(outputs, target)
+        win_prob = torch.sigmoid(outputs * WDL_K)
+        loss = criterion(win_prob, target)
         loss.backward()
         optimizer.step()
 
-    
     print(f"Epoch {epoch+1}, Loss: {loss.item():.4f}, Time: {time.time()-t0:.1f}s")
 
 
-save_weights(model, 'model.bin')
+save_weights(model, args.output)

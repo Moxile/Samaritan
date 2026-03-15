@@ -35,6 +35,11 @@ add_executable(samaritan "${CMAKE_CURRENT_SOURCE_DIR}/samaritan.cxx")
 target_compile_options(samaritan PRIVATE ${COMMON_COMPILE_OPTIONS})
 target_link_libraries(samaritan PRIVATE samaritan_lib)
 
+# Self-play data generator
+add_executable(datagen "${CMAKE_CURRENT_SOURCE_DIR}/datagen.cxx")
+target_compile_options(datagen PRIVATE ${COMMON_COMPILE_OPTIONS})
+target_link_libraries(datagen PRIVATE samaritan_lib CLI11::CLI11)
+
 # Tests
 add_executable(nnue_bench "${CMAKE_CURRENT_SOURCE_DIR}/tests/nnue.cc")
 target_include_directories(nnue_bench PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -46,7 +51,7 @@ target_link_libraries(nnue_bench PRIVATE
 
 
 # Install rules
-install(TARGETS samaritan samaritan_lib
+install(TARGETS samaritan samaritan_lib datagen
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib

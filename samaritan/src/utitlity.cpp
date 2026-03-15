@@ -211,6 +211,80 @@ constexpr char piece2char(PieceType type)
     }
 }
 
+std::string positionToFEN(const Position &pos)
+{
+    const GameState &state = pos.gameStates.back();
+
+    // Turn
+    char turnChar = '?';
+    switch (state.curTurn) {
+        case RED:    turnChar = 'R'; break;
+        case BLUE:   turnChar = 'B'; break;
+        case YELLOW: turnChar = 'Y'; break;
+        case GREEN:  turnChar = 'G'; break;
+        default: break;
+    }
+
+    // Castling OO: R,B,Y,G
+    auto castleBit = [&](CastlingRights r) -> char {
+        return (state.castleRights & r) ? '1' : '0';
+    };
+    std::string oo  = std::string(1, castleBit(RED_OO))    + "," + castleBit(BLUE_OO)    + "," + castleBit(YELLOW_OO)    + "," + castleBit(GREEN_OO);
+    std::string ooo = std::string(1, castleBit(RED_OOO))   + "," + castleBit(BLUE_OOO)   + "," + castleBit(YELLOW_OOO)   + "," + castleBit(GREEN_OOO);
+
+    // Board: 14 rows, cols 1-14
+    std::string board;
+    for (int row = 0; row < 14; row++)
+    {
+        if (row > 0) board += '/';
+        int emptyCount = 0;
+        bool firstCell = true;
+
+        auto flushEmpty = [&]() {
+            if (emptyCount > 0) {
+                if (!firstCell) board += ',';
+                board += std::to_string(emptyCount);
+                emptyCount = 0;
+                firstCell = false;
+            }
+        };
+
+        for (int col = 1; col <= 14; col++)
+        {
+            int loc = row * 16 + col;
+            if (baseMailbox[loc] == -1)
+            {
+                flushEmpty();
+                if (!firstCell) board += ',';
+                board += 'x';
+                firstCell = false;
+            }
+            else if (pos.board.pieceMailbox[loc] == NONE_PIECE)
+            {
+                emptyCount++;
+            }
+            else
+            {
+                flushEmpty();
+                if (!firstCell) board += ',';
+                // color char
+                switch (pos.board.colorMailbox[loc]) {
+                    case RED:    board += 'r'; break;
+                    case BLUE:   board += 'b'; break;
+                    case YELLOW: board += 'y'; break;
+                    case GREEN:  board += 'g'; break;
+                    default: break;
+                }
+                board += piece2char(pos.board.pieceMailbox[loc]);
+                firstCell = false;
+            }
+        }
+        flushEmpty();
+    }
+
+    return std::string(1, turnChar) + "-0,0,0,0-" + oo + "-" + ooo + "-0,0,0,0-0-" + board;
+}
+
 void print(Position &pos)
 {
     printf("     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n");
