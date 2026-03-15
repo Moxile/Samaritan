@@ -174,7 +174,7 @@ optimizer = optim.Adam(model.parameters(), lr=args.lr)
 class Positions(torch.utils.data.Dataset):
     def __init__(self, path):
         with open(path) as f:
-            self.lines = f.readlines()
+            self.lines = [l for l in f if ';' in l]
 
     def __len__(self):
         return len(self.lines)

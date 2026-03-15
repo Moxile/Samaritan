@@ -4,3 +4,4 @@
 /train/model.bin
 /samaritan/include/nnue/models
 /samaritan/selfplay.txt
+/train/selfplay.txt

@@ -254,10 +254,7 @@ std::string positionToFEN(const Position &pos)
             int loc = row * 16 + col;
             if (baseMailbox[loc] == -1)
             {
-                flushEmpty();
-                if (!firstCell) board += ',';
-                board += 'x';
-                firstCell = false;
+                emptyCount++;
             }
             else if (pos.board.pieceMailbox[loc] == NONE_PIECE)
             {
