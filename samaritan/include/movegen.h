@@ -12,7 +12,7 @@ bool inCheck(const Position &pos, PieceColor color);
 
 struct MoveList
 {
-    explicit MoveList(Position pos);
+    explicit MoveList(Position& pos);
 
     ExtMove *begin() { return moveList; }
     ExtMove *end() { return last; }

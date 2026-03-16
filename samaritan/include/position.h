@@ -154,6 +154,7 @@ public:
 
         // Create the new game state
         GameState state = GameState();
+        state.castleRights = gameStates.back().castleRights;
         state.curTurn = gameStates.back().curTurn;
         state.curTurn++;
         state.lastCapturedPiece = board.pieceMailbox[destination];

@@ -33,12 +33,12 @@ BENCHMARK(BM_Perft)->Unit(benchmark::kMillisecond)->RangeMultiplier(2)->Range(1,
 
 int main(int argc, char* argv[])
 {
-    // Check for --perf flag first
+    // Check for --perft flag first
     bool run_benchmarks = false;
     for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "--perf") {
+        if (std::string(argv[i]) == "--perft") {
             run_benchmarks = true;
-            // Remove --perf from argv by shifting remaining args
+            // Remove --perft from argv by shifting remaining args
             for (int j = i; j < argc - 1; ++j) {
                 argv[j] = argv[j + 1];
             }

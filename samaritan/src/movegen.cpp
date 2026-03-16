@@ -468,7 +468,7 @@ ExtMove *generate(Position &pos, ExtMove *moveList)
     }
     return moveList;
 }
-MoveList::MoveList(Position pos) : last(generate(pos, moveList)) {}
+MoveList::MoveList(Position& pos) : last(generate(pos, moveList)) {}
 
 void MoveList::print() const
 {
