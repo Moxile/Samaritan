@@ -103,7 +103,7 @@ public:
     std::vector<GameState> gameStates;
     NNUE nnue;
 
-    Position() : board(), nnue(16) {}
+    Position() : board(), nnue() {}
 
     void refreshNNUE()
     {

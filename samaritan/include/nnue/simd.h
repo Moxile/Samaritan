@@ -1,10 +1,13 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <new>
 #include <vector>
+
+static constexpr int HIDDEN_SIZE = 16;
 
 template <typename T, std::size_t Align>
 struct AlignedAllocator {
@@ -21,8 +24,20 @@ struct AlignedAllocator {
     bool operator!=(const AlignedAllocator&) const noexcept { return false; }
 };
 
-using AlignedVec16 = std::vector<int16_t, AlignedAllocator<int16_t, 64>>;
-using AlignedVec8  = std::vector<uint8_t, AlignedAllocator<uint8_t,  64>>;
+struct alignas(64) AlignedArr16 {
+    std::array<int16_t, HIDDEN_SIZE> v{};
+    int16_t*       data()       { return v.data(); }
+    const int16_t* data() const { return v.data(); }
+    int16_t&       operator[](size_t i)       { return v[i]; }
+    const int16_t& operator[](size_t i) const { return v[i]; }
+    static constexpr size_t size() { return HIDDEN_SIZE; }
+    auto begin()       { return v.begin(); }
+    auto end()         { return v.end(); }
+    auto begin() const { return v.begin(); }
+    auto end()   const { return v.end(); }
+};
+
+using AlignedVec8 = std::vector<uint8_t, AlignedAllocator<uint8_t, 64>>;
 
 #if defined(__AVX2__)
     #include <immintrin.h>

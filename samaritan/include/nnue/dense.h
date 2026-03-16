@@ -1,103 +1,34 @@
 #pragma once
 
 #include "nnue/simd.h"
-#include <stdexcept>
 #include <cassert>
+#include <cmath>
 #include <random>
 
-// template <typename T>
-// class DenseLayer
-// {
-// private:
-//     size_t nodeCount_;
-//     size_t inputSize_;
-//     std::vector<T> weights_;
-//     std::vector<T> biases_;
-
-// public:
-//     DenseLayer(size_t nodeCount, size_t inputSize)
-//         : nodeCount_(nodeCount), inputSize_(inputSize), weights_(nodeCount * inputSize), biases_(nodeCount_)
-//     {
-//         assert(nodeCount != 0 && inputSize != 0);
-
-//         std::fill(weights_.begin(), weights_.end(), 0.0f);
-//         std::fill(biases_.begin(), biases_.end(), 0.0f);
-//     }
-
-//     void setWeights(const std::vector<T> &weights)
-//     {
-//         assert(weights.size() == nodeCount_ * inputSize_);
-//         weights_ = weights;
-//     }
-
-//     void setBiases(const std::vector<T> &biases)
-//     {
-//         assert(biases.size() == nodeCount_);
-//         biases_ = biases;
-//     }
-
-//     std::vector<T> forward(const std::vector<T> &input) const
-//     {
-//         assert(input.size() == inputSize_);
-
-//         std::vector<T> output(nodeCount_);
-
-//         for (size_t i = 0; i < nodeCount_; ++i)
-//         {
-//             size_t index = i * inputSize_;
-//             T sum = 0;
-//             for (size_t j = 0; j < inputSize_; ++j)
-//             {
-//                 sum += weights_[index + j] * input[j];
-//             }
-//             output[i] = sum + biases_[i];
-//         }
-
-//         return output;
-//     }
-
-//     void single_forward_add(std::vector<T> &output, int node)
-//     {
-//         for(size_t i = 0; i < output.size(); i++)
-//         {
-//             output[i] += weights_[node * nodeCount_ + i];
-//         }
-//     }
-
-//     void single_forward_rem(std::vector<T> &output, int node)
-//     {
-//         for(size_t i = 0; i < output.size(); i++)
-//         {
-//             output[i] -= weights_[node * nodeCount_ + i];
-//         }
-//     }
-// };
-
 class AccumulatorLayer {
-    std::vector<int16_t, AlignedAllocator<int16_t, 64>> weights; // [Feature][Hidden]
-    std::vector<int16_t, AlignedAllocator<int16_t, 64>> biases; // [Hidden]
-    size_t hiddenSize;
+    std::vector<int16_t, AlignedAllocator<int16_t, 64>> weights; // [Feature * HIDDEN_SIZE]
+    AlignedArr16 biases;
 
     static constexpr int QA = 255;
 
-    public:
-    AccumulatorLayer(size_t feature_count, size_t hidden_size) : hiddenSize(hidden_size), weights(feature_count * hidden_size, 0), biases(hidden_size, 0) {
+public:
+    AccumulatorLayer(size_t feature_count) : weights(feature_count * HIDDEN_SIZE, 0) {
         std::mt19937 rng(42);
         std::uniform_int_distribution<int16_t> dist(-10, 200);
         for (auto& w : weights) w = dist(rng);
         for (auto& b : biases)  b = dist(rng);
     }
 
-    void add(AlignedVec16& acc, int feature) {
-        simd_add_i16(acc.data(), &weights[feature * hiddenSize], hiddenSize);
+    void add(AlignedArr16& acc, int feature) {
+        simd_add_i16(acc.data(), &weights[feature * HIDDEN_SIZE], HIDDEN_SIZE);
     }
 
-    void rem(AlignedVec16& acc, int feature) {
-        simd_sub_i16(acc.data(), &weights[feature * hiddenSize], hiddenSize);
+    void rem(AlignedArr16& acc, int feature) {
+        simd_sub_i16(acc.data(), &weights[feature * HIDDEN_SIZE], HIDDEN_SIZE);
     }
 
-    void refresh(AlignedVec16& acc, const AlignedVec8& input) {
-        for (size_t i = 0; i < hiddenSize; i++)
+    void refresh(AlignedArr16& acc, const AlignedVec8& input) {
+        for (size_t i = 0; i < HIDDEN_SIZE; i++)
             acc[i] = biases[i];
         for (size_t f = 0; f < input.size(); f++)
             if (input[f])
@@ -105,30 +36,30 @@ class AccumulatorLayer {
     }
 
     void loadFromFloats(const float* w, const float* b) {
-        for (size_t i =0; i < weights.size(); i++)
+        for (size_t i = 0; i < weights.size(); i++)
             weights[i] = static_cast<int16_t>(std::round(w[i] * QA));
-        for (size_t i = 0; i < biases.size(); i++)
+        for (size_t i = 0; i < HIDDEN_SIZE; i++)
             biases[i] = static_cast<int16_t>(std::round(b[i] * QA));
     }
-
 };
 
 class OutputLayer {
-    std::vector<int16_t, AlignedAllocator<int16_t, 64>> weights; // [Hidden]
+    AlignedArr16 weights;
     int32_t bias;
+
     static constexpr int QA = 255;
     static constexpr int QB = 64;
 
-    public:
-    OutputLayer(size_t hidden_size) : weights(hidden_size), bias(0) {
+public:
+    OutputLayer() : bias(0) {
         std::mt19937 rng(42);
         std::uniform_int_distribution<int16_t> dist(-100, 200);
         for (auto& w : weights) w = dist(rng);
     }
 
-    int32_t forward(const AlignedVec16& acc) {
+    int32_t forward(const AlignedArr16& acc) {
         int32_t sum = bias;
-        for (size_t i = 0; i < weights.size(); i++) {
+        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
             int32_t clipped = std::clamp((int32_t)acc[i], (int32_t)0, (int32_t)QA);
             sum += clipped * weights[i];
         }
@@ -136,10 +67,8 @@ class OutputLayer {
     }
 
     void loadFromFloats(const float* w, float b) {
-        for (size_t i = 0; i < weights.size(); i++)
+        for (size_t i = 0; i < HIDDEN_SIZE; i++)
             weights[i] = static_cast<int16_t>(std::round(w[i] * QB));
         bias = static_cast<int32_t>(std::round(b * QA * QB));
     }
-
-
 };

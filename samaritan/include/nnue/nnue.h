@@ -13,7 +13,7 @@ class NNUE
         OutputLayer output;
         Accumulator accumulators[4];
         int evaluation;
-        std::vector<int16_t, AlignedAllocator<int16_t, 64>> hidden_output_[4];
+        AlignedArr16 hidden_output_[4];
 
         void loadWeights(const std::string& path) {
             std::ifstream f(path, std::ios::binary);
@@ -25,6 +25,9 @@ class NNUE
             int32_t version, hs;
             f.read(reinterpret_cast<char*>(&version), 4);
             f.read(reinterpret_cast<char*>(&hs), 4);
+
+            if (hs != HIDDEN_SIZE)
+                throw std::runtime_error("Model hidden size mismatch");
 
             size_t l1_w = Accumulator::FEATURE_COUNT * hs;
             std::vector<float> w(l1_w), b(hs), ow(hs);
@@ -39,12 +42,10 @@ class NNUE
             output.loadFromFloats(ow.data(), ob);
         }
 
-        NNUE(size_t hiddensize) : 
-            hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT, hiddensize)),
-            output(OutputLayer(hiddensize))
+        NNUE() :
+            hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT)),
+            output(OutputLayer())
         {
-            assert(hiddensize % 16 == 0);
-
             loadWeights("./include/nnue/models/model.bin");
 
             accumulators[0] = Accumulator(static_cast<PieceColor>(1));
@@ -52,10 +53,7 @@ class NNUE
             accumulators[2] = Accumulator(static_cast<PieceColor>(4));
             accumulators[3] = Accumulator(static_cast<PieceColor>(8));
             for (size_t i = 0; i < 4; ++i)
-            {
-                hidden_output_[i].resize(hiddensize, 0);
                 accumulators[i].reset();
-            }
         }
 
 
