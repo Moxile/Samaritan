@@ -101,9 +101,10 @@ class Position
 public:
     Board board;
     std::vector<GameState> gameStates;
+    const bool useEval;
     NNUE nnue;
 
-    Position() : board(), nnue() {}
+    Position(bool eval = true) : board(), nnue(), useEval(eval) {}
 
     void refreshNNUE()
     {
@@ -157,22 +158,27 @@ public:
         state.curTurn++;
         state.lastCapturedPiece = board.pieceMailbox[destination];
         state.lastCapturedPieceColor = board.colorMailbox[destination];
-        if(state.lastCapturedPiece != NONE_PIECE)
+
+        if (useEval)
         {
-            for(auto &accumulator : nnue.accumulators)
+            if(state.lastCapturedPiece != NONE_PIECE)
             {
-                for (int k = 0; k < 4; k++)
+                for(auto &accumulator : nnue.accumulators)
                 {
-                    accumulator.set(accumulator.get_board_feat(destination, state.lastCapturedPiece, state.lastCapturedPieceColor, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
+                    for (int k = 0; k < 4; k++)
+                    {
+                        accumulator.set(accumulator.get_board_feat(destination, state.lastCapturedPiece, state.lastCapturedPieceColor, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
+                    }
+                }
+
+                // for null move pruning
+                if(state.lastCapturedPiece != PAWN)
+                {
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int) state.lastCapturedPieceColor)]--;
                 }
             }
-
-            // for null move pruning
-            if(state.lastCapturedPiece != PAWN)
-            {
-                board.nonPawnPieceCount[__builtin_ctz((unsigned int) state.lastCapturedPieceColor)]--;
-            }
         }
+
         std::memcpy(state.enpassants,
             gameStates.back().enpassants,
             sizeof(state.enpassants));
@@ -335,22 +341,22 @@ public:
                 switch(board.colorMailbox[destination])
                 {
                     case RED:
-                        setFeat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]);
+                        if(useEval) setFeat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]);
                         board.pieceMailbox[loc + NORTH] = NONE_PIECE;
                         board.colorMailbox[loc + NORTH] = NONE_COLOR;
                         break;
                     case BLUE:
-                        setFeat(loc + EAST, PAWN, board.colorMailbox[loc + EAST]);
+                        if(useEval) setFeat(loc + EAST, PAWN, board.colorMailbox[loc + EAST]);
                         board.pieceMailbox[loc + EAST] = NONE_PIECE;
                         board.colorMailbox[loc + EAST] = NONE_COLOR;
                         break;
                     case YELLOW:
-                        setFeat(loc + SOUTH, PAWN, board.colorMailbox[loc + SOUTH]);
+                        if(useEval) setFeat(loc + SOUTH, PAWN, board.colorMailbox[loc + SOUTH]);
                         board.pieceMailbox[loc + SOUTH] = NONE_PIECE;
                         board.colorMailbox[loc + SOUTH] = NONE_COLOR;
                         break;
                     case GREEN:
-                        setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
+                        if(useEval) setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
                         board.pieceMailbox[loc + WEST] = NONE_PIECE;
                         board.colorMailbox[loc + WEST] = NONE_COLOR;
                         break;
@@ -378,15 +384,18 @@ public:
             }
         }
 
-        if (board.pieceMailbox[destination] == KING)
+        if(useEval) 
         {
-            refreshNNUE();
-            nnue.init_eval(state.curTurn);
-        }
-        else
-        {
-            setFeat(loc, movingPiece, board.colorMailbox[destination]);
-            setFeat(destination, board.pieceMailbox[destination], board.colorMailbox[destination]);
+            if (board.pieceMailbox[destination] == KING)
+            {
+                refreshNNUE();
+                nnue.init_eval(state.curTurn);
+            }
+            else
+            {
+                setFeat(loc, movingPiece, board.colorMailbox[destination]);
+                setFeat(destination, board.pieceMailbox[destination], board.colorMailbox[destination]);
+            }
         }
 
         gameStates.push_back(state);
@@ -410,14 +419,17 @@ public:
         board.colorMailbox[loc] = board.colorMailbox[destination];
         board.pieceMailbox[destination] = gameStates.back().lastCapturedPiece;
         board.colorMailbox[destination] = gameStates.back().lastCapturedPieceColor;
-        if (gameStates.back().lastCapturedPiece != NONE_PIECE)
+        if(useEval) 
         {
-            setFeat(destination, gameStates.back().lastCapturedPiece, gameStates.back().lastCapturedPieceColor);
-
-            // for null move pruning
-            if(gameStates.back().lastCapturedPiece != PAWN)
+            if (gameStates.back().lastCapturedPiece != NONE_PIECE)
             {
-                board.nonPawnPieceCount[__builtin_ctz((unsigned int) gameStates.back().lastCapturedPieceColor)]++;
+                setFeat(destination, gameStates.back().lastCapturedPiece, gameStates.back().lastCapturedPieceColor);
+
+                // for null move pruning
+                if(gameStates.back().lastCapturedPiece != PAWN)
+                {
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int) gameStates.back().lastCapturedPieceColor)]++;
+                }
             }
         }
         // Restore promotion
@@ -517,7 +529,7 @@ public:
                        board.pieceMailbox[loc + NORTH] = PAWN;
                        board.colorMailbox[loc + NORTH] = GREEN;
                     }
-                    setFeat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]);
+                    if(useEval) setFeat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]);
                     break;
                 case BLUE:
                     if(destination == loc + EAST + NORTH)
@@ -530,7 +542,7 @@ public:
                        board.pieceMailbox[loc + EAST] = PAWN;
                        board.colorMailbox[loc + EAST] = RED;
                     }
-                    setFeat(loc + EAST, PAWN, board.colorMailbox[loc + EAST]);
+                    if(useEval) setFeat(loc + EAST, PAWN, board.colorMailbox[loc + EAST]);
                     break;
                 case YELLOW:
                     if(destination == loc + SOUTH + WEST)
@@ -543,7 +555,7 @@ public:
                        board.pieceMailbox[loc + SOUTH] = PAWN;
                         board.colorMailbox[loc + SOUTH] = GREEN;
                     }
-                    setFeat(loc + SOUTH, PAWN, board.colorMailbox[loc + SOUTH]);
+                    if(useEval) setFeat(loc + SOUTH, PAWN, board.colorMailbox[loc + SOUTH]);
                     break;
                 case GREEN:
                     if(destination == loc + WEST + NORTH)
@@ -556,7 +568,7 @@ public:
                        board.pieceMailbox[loc + WEST] = PAWN;
                         board.colorMailbox[loc + WEST] = RED;
                     }
-                    setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
+                    if(useEval) setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
                     break;
                 default:
                     throw std::runtime_error("Unknown color given");
@@ -567,15 +579,18 @@ public:
         if (board.pieceMailbox[loc] == KING)
             board.kingTracker[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))] = loc;
 
-        if (board.pieceMailbox[loc] == KING)
+        if(useEval) 
         {
-            refreshNNUE();
-            nnue.init_eval(gameStates.back().curTurn);
-        }
-        else
-        {
-            setFeat(loc, board.pieceMailbox[loc], board.colorMailbox[loc]);
-            setFeat(destination, pieceAtDest, colorAtDest);
+            if (board.pieceMailbox[loc] == KING)
+            {
+                refreshNNUE();
+                nnue.init_eval(gameStates.back().curTurn);
+            }
+            else
+            {
+                setFeat(loc, board.pieceMailbox[loc], board.colorMailbox[loc]);
+                setFeat(destination, pieceAtDest, colorAtDest);
+            }
         }
     }
 };

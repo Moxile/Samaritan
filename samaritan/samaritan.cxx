@@ -18,7 +18,7 @@ static void BM_Perft(benchmark::State& state) {
                                    "14/"
                                    "3,rP,rP,rP,rP,rP,rP,rP,rP,3/"
                                    "3,rR,rN,rB,rQ,rK,rB,rN,rR,3";
-    Position pos = Position();
+    Position pos = Position(false);
     loadFEN(pos, modern_fen);
 
     int nodes = 0;
@@ -27,6 +27,7 @@ static void BM_Perft(benchmark::State& state) {
         nodes += fullsearch(depth, pos);
     }
     state.SetItemsProcessed(nodes);
+    state.counters["NPS"] = benchmark::Counter(nodes, benchmark::Counter::kIsRate);
 }
 BENCHMARK(BM_Perft)->Unit(benchmark::kMillisecond)->RangeMultiplier(2)->Range(1, 4)->ArgNames({"Depth"});
 
