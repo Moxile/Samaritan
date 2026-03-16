@@ -61,7 +61,7 @@ constexpr int offsets[11][16] = {{},
 };
 
 constexpr inline bool isInvalidLocation(int location) {
-    return location < 1 || baseMailbox[location] == -1 || location > 220;
+    return location < 1 || location > 220 || baseMailbox[location] == -1;
 }
 
 constexpr inline PieceColor getTeam(PieceColor color)
