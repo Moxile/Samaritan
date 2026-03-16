@@ -35,13 +35,14 @@ struct RecordedPos {
 
 static GameResult playGame(int depth, int randomPlies, int maxMoves,
                            std::vector<RecordedPos>& positions,
-                           std::mt19937& rng)
+                           std::mt19937& rng, bool visual)
 {
     Position pos;
     loadFEN(pos, MODERN_FEN);
     positions.clear();
 
-    int moveCount = 0;
+    int  moveCount     = 0;
+    bool boardPrinted  = false;
 
     while (true)
     {
@@ -94,7 +95,18 @@ static GameResult playGame(int depth, int randomPlies, int maxMoves,
         pos.move(chosen);
         moveCount++;
 
-        std::cout << "\r  move " << moveCount << "  " << std::flush;
+        if (visual)
+        {
+            if (boardPrinted)
+                printf("\033[22A");  // 20 board lines + 1 move line + 1 extra
+            print(pos);
+            printf("  move %d\n", moveCount);
+            boardPrinted = true;
+        }
+        else
+        {
+            std::cout << "\r  move " << moveCount << "  " << std::flush;
+        }
     }
 }
 
@@ -107,12 +119,14 @@ int main(int argc, char** argv)
     int         randomPlies = 8;
     int         maxMoves    = 400;
     std::string outputPath  = "selfplay.txt";
+    bool        visual      = false;
 
     app.add_option("--games",        numGames,    "Number of games to play")->capture_default_str();
     app.add_option("--depth",        searchDepth, "Search depth per move")->capture_default_str();
     app.add_option("--random-plies", randomPlies, "Random opening moves for diversity")->capture_default_str();
     app.add_option("--max-moves",    maxMoves,    "Max moves before declaring draw")->capture_default_str();
     app.add_option("--output",       outputPath,  "Output file path")->capture_default_str();
+    app.add_flag  ("--visual",       visual,      "Live board display in terminal");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -130,7 +144,7 @@ int main(int argc, char** argv)
     for (int game = 1; game <= numGames; game++)
     {
         std::vector<RecordedPos> positions;
-        GameResult result = playGame(searchDepth, randomPlies, maxMoves, positions, rng);
+        GameResult result = playGame(searchDepth, randomPlies, maxMoves, positions, rng, visual);
 
         // Update counters
         if      (result == GameResult::WIN_RY) winsRY++;

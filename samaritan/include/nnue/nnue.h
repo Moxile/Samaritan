@@ -45,7 +45,7 @@ class NNUE
         {
             assert(hiddensize % 16 == 0);
 
-            //loadWeights("./include/nnue/models/model.bin");
+            loadWeights("./include/nnue/models/model.bin");
 
             accumulators[0] = Accumulator(static_cast<PieceColor>(1));
             accumulators[1] = Accumulator(static_cast<PieceColor>(2));
