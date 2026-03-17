@@ -178,7 +178,9 @@ namespace samaritan
     }
 
     void Engine::handlePerft() {
-        perft(perft_depth, pos);
+        Position perft_pos(false);
+        loadFEN(perft_pos, positionToFEN(pos));
+        perft(perft_depth, perft_pos);
     }
 
     void Engine::handlePrint() {

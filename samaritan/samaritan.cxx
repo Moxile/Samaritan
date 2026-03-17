@@ -29,7 +29,7 @@ static void BM_Perft(benchmark::State& state) {
     state.SetItemsProcessed(nodes);
     state.counters["NPS"] = benchmark::Counter(nodes, benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_Perft)->Unit(benchmark::kMillisecond)->RangeMultiplier(2)->Range(1, 4)->ArgNames({"Depth"});
+BENCHMARK(BM_Perft)->Unit(benchmark::kMillisecond)->DenseRange(1, 6, 1)->ArgNames({"Depth"});
 
 int main(int argc, char* argv[])
 {
