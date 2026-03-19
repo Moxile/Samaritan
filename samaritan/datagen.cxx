@@ -35,7 +35,7 @@ struct RecordedPos {
 
 static GameResult playGame(int depth, int randomPlies, int maxMoves,
                            std::vector<RecordedPos>& positions,
-                           std::mt19937& rng, bool visual)
+                           std::mt19937& rng, bool visual, TranspositionTable& tt)
 {
     Position pos;
     loadFEN(pos, MODERN_FEN);
@@ -80,7 +80,7 @@ static GameResult playGame(int depth, int randomPlies, int maxMoves,
         else
         {
             pos.nnue.init_eval(curTurn);
-            SearchInfo info = iterativeDeepening(pos, depth, /*silent=*/true);
+            SearchInfo info = iterativeDeepening(pos, tt, depth, /*silent=*/true);
             if (info.pv_length[0] == 0)
             {
                 // Fallback: pick first legal move (shouldn't happen)
@@ -137,6 +137,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    initZobrist();
+    TranspositionTable tt;
+    tt.resize(64);
+
     std::mt19937 rng(std::random_device{}());
 
     int winsRY = 0, winsBG = 0, draws = 0;
@@ -144,7 +148,7 @@ int main(int argc, char** argv)
     for (int game = 1; game <= numGames; game++)
     {
         std::vector<RecordedPos> positions;
-        GameResult result = playGame(searchDepth, randomPlies, maxMoves, positions, rng, visual);
+        GameResult result = playGame(searchDepth, randomPlies, maxMoves, positions, rng, visual, tt);
 
         // Update counters
         if      (result == GameResult::WIN_RY) winsRY++;
