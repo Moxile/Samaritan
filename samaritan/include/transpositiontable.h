@@ -7,12 +7,12 @@
 
 
 
-static uint64_t zobristPieces[160][6][4];
-static uint64_t zobristTurn[4];
-static uint64_t zobristCastle[8];
-static uint64_t zobristEnPassant[4][160];
+inline uint64_t zobristPieces[160][6][4];
+inline uint64_t zobristTurn[4];
+inline uint64_t zobristCastle[8];
+inline uint64_t zobristEnPassant[4][160];
 
-static void initZobrist() {
+inline void initZobrist() {
     std::mt19937_64 rng(123456789ULL);
 
     for (int sq = 0; sq < 160; sq++)

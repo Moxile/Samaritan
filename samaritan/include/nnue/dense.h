@@ -14,7 +14,7 @@ class AccumulatorLayer {
 public:
     AccumulatorLayer(size_t feature_count) : weights(feature_count * HIDDEN_SIZE, 0) {
         std::mt19937 rng(42);
-        std::uniform_int_distribution<int16_t> dist(-10, 200);
+        std::uniform_int_distribution<int16_t> dist(-255, 255);
         for (auto& w : weights) w = dist(rng);
         for (auto& b : biases)  b = dist(rng);
     }
@@ -53,7 +53,7 @@ class OutputLayer {
 public:
     OutputLayer() : bias(0) {
         std::mt19937 rng(42);
-        std::uniform_int_distribution<int16_t> dist(-100, 200);
+        std::uniform_int_distribution<int16_t> dist(-255, 255);
         for (auto& w : weights) w = dist(rng);
     }
 

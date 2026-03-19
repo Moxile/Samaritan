@@ -46,7 +46,7 @@ class NNUE
             hidden(AccumulatorLayer(Accumulator::FEATURE_COUNT)),
             output(OutputLayer())
         {
-            loadWeights("./include/nnue/models/model.bin");
+            //loadWeights("./include/nnue/models/model.bin");
 
             accumulators[0] = Accumulator(static_cast<PieceColor>(1));
             accumulators[1] = Accumulator(static_cast<PieceColor>(2));
