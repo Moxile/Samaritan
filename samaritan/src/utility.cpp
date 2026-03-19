@@ -4,6 +4,7 @@ const void loadFEN(Position &pos, const std::string fen)
 {
     pos.gameStates.clear();
     GameState initialState;
+    initialState.zobristKey = 0;
     auto parts = fen | std::views::split('-') | std::views::transform([](auto v)
                                                                       {
                     auto c = v | std::views::common;
@@ -17,6 +18,7 @@ const void loadFEN(Position &pos, const std::string fen)
         {
         case 1:
             fen_setPlayerToMove(initialState, part);
+            initialState.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)initialState.curTurn)];
             break;
         case 2:
             break;
@@ -37,6 +39,28 @@ const void loadFEN(Position &pos, const std::string fen)
             break;
         }
         part_counter++;
+    }
+
+    // Set Zobrist Key
+    for (int sq = 0; sq < 224; sq++) {
+        if (pos.board.pieceMailbox[sq] == NONE_PIECE) continue;
+        int idx = board_table[sq];
+        int piece = pos.board.pieceMailbox[sq] - 1;
+        int color = __builtin_ctz((unsigned int)pos.board.colorMailbox[sq]);
+        initialState.zobristKey ^= zobristPieces[idx][piece][color];
+    }
+
+    initialState.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)initialState.curTurn)];
+
+    int rights = initialState.castleRights;
+    for (int i = 0; i < 8; i++)
+        if (rights & (1 << i))
+            initialState.zobristKey ^= zobristCastle[i];
+
+    for (int player = 0; player < 4; player++) {
+        int ep = initialState.enpassants[player];
+        if (ep != -1)
+            initialState.zobristKey ^= zobristEnPassant[player][board_table[ep]];
     }
 
     // init accumulator

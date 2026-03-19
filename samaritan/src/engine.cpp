@@ -19,10 +19,13 @@ namespace samaritan
                              "14/"
                              "3,rP,rP,rP,rP,rP,rP,rP,rP,3/"
                              "3,rR,rN,rB,rQ,rK,rB,rN,rR,3";
+
     Engine::Engine() : pos()
     {
-        loadFEN(pos, modern_fen);
 
+        loadFEN(pos, modern_fen);
+        initZobrist();
+        tt.resize(64);
 
         auto* uciCommand = app.add_subcommand("uci", "[UCI] Start UCI protocol and identify the engine")
         ->callback([this]() { handleUCI(); });
@@ -146,6 +149,10 @@ namespace samaritan
 
     void Engine::handleUCINewGame()
     {
+        initZobrist();
+        loadFEN(pos, modern_fen);
+        // for now reset, can be removed and keep warm tt though
+        tt.resize(64);
 
     }
 
@@ -164,7 +171,7 @@ namespace samaritan
         }
 
         pos.nnue.init_eval(pos.gameStates.back().curTurn);
-        SearchInfo info = iterativeDeepening(pos, depth);
+        SearchInfo info = iterativeDeepening(pos, tt, depth);
         std::cout << "bestmove " << info.pv_table[0][0].toUCI() << std::endl;
     }
 

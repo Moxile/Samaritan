@@ -13,6 +13,7 @@ namespace samaritan
         private:
 
             Position pos = Position();
+            TranspositionTable tt;
             CLI::App app{"Samaritan Engine CLI"};
 
             // Configuration
@@ -22,7 +23,7 @@ namespace samaritan
             std::string position_mode;
 
             // Search options
-            int depth = 6;
+            int depth = 10;
 
             // Perft options
             int  perft_depth;

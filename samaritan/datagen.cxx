@@ -98,7 +98,7 @@ static GameResult playGame(int depth, int randomPlies, int maxMoves,
         if (visual)
         {
             if (boardPrinted)
-                printf("\033[22A");  // 20 board lines + 1 move line + 1 extra
+                printf("\033[21A");  // 20 board lines + 1 move line
             print(pos);
             printf("  move %d\n", moveCount);
             boardPrinted = true;

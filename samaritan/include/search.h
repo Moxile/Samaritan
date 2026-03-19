@@ -8,11 +8,11 @@ static Move killermoves[MAX_PLY][2];
 struct SearchInfo {
     Move pv_table[MAX_PLY][MAX_PLY];
     int pv_length[MAX_PLY];
-    int seldepth = 0;
     long long nodes = 0;
+    int seldepth = 0;
 };
 
-static int qSearch(Position& pos, int ply, SearchInfo& info, int alpha, int beta)
+static int qSearch(Position& pos, int ply, SearchInfo& info, TranspositionTable& tt, int alpha, int beta)
 {
     info.nodes++;
     pos.nnue.incremental_update(pos.gameStates.back().curTurn);
@@ -27,7 +27,7 @@ static int qSearch(Position& pos, int ply, SearchInfo& info, int alpha, int beta
         if(move.gen_type != CAPTURES) continue;
 
         pos.move(move);
-        int score = -qSearch(pos, ply+1, info, -beta, -alpha);
+        int score = -qSearch(pos, ply+1, info, tt, -beta, -alpha);
         pos.undoMove(move);
         if (score >= beta) return beta;
         if (score > alpha) alpha = score;
@@ -36,15 +36,25 @@ static int qSearch(Position& pos, int ply, SearchInfo& info, int alpha, int beta
     return alpha;
 }
 
-static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alpha=-1000000, int beta=1000000, bool allowNullMove=true) {
+static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, TranspositionTable& tt, int alpha=-1000000, int beta=1000000, bool allowNullMove=true) {
     info.pv_length[ply] = 0;
     info.seldepth = std::max(info.seldepth, ply);
     info.nodes++;
+
+    uint64_t ttKey = pos.gameStates.back().zobristKey;
+    int origAlpha = alpha;
+    TTEntry* ttEntry = tt.probe(ttKey);
+    if (ttEntry && ttEntry->depth >= depth)
+    {
+        if (ttEntry->flag == TT_EXACT) return ttEntry->score;
+        if (ttEntry->flag == TT_LOWER) alpha = std::max(alpha, ttEntry->score);
+        if (ttEntry->flag == TT_UPPER) beta  = std::min(beta,  ttEntry->score);
+        if (alpha >= beta) return ttEntry->score;
+    }
+
     if (depth == 0)
     {
-        return qSearch(pos, ply, info, alpha, beta);
-        // pos.nnue.incremental_update(pos.gameStates.back().curTurn);
-        // return pos.nnue.evaluation;
+        return qSearch(pos, ply, info, tt, alpha, beta);
     }
 
     PieceColor curTurn = pos.gameStates.back().curTurn;
@@ -65,39 +75,34 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
     if (depth >= 3 && allowNullMove && !check && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)pos.gameStates.back().curTurn)] > 1)
     {
        pos.makeNullMove();
-       int score = -negaMax(pos, depth - 3, ply + 1, info, -beta, -beta+1, false);
+       int score = -negaMax(pos, depth - 3, ply + 1, info, tt, -beta, -beta+1, false);
        pos.undoNullMove();
        if (score >= beta) return beta;
     }
 
-    // TODO: move later to a better place to prevent iterating through all again (or add )
-    // apply move scores like TT, Killermoves, History, ...
+    // apply move scores: TT best move, killer moves
     for(ExtMove& move : moves)
     {
+        if (ttEntry && move == ttEntry->bestMove)
+            move.value += 10000;
 
-        // killer moves
         if(killermoves[ply][0] == move)
-        {
             move.value += 500;
-        }
         if(killermoves[ply][1] == move)
-        {
             move.value += 500;
-        }
     }
 
     moves.sort();
 
-
+    Move bestMove;
     for (ExtMove& move : moves) {
         pos.move(move);
-        bool givesCheck = inCheck(pos, curTurn+1) || inCheck(pos, curTurn+3);
-        int score = -negaMax(pos, depth - 1, ply + 1, info, -beta, -alpha, true);
+        int score = -negaMax(pos, depth - 1, ply + 1, info, tt, -beta, -alpha, true);
         pos.undoMove(move);
 
         if(score >= beta)
         {
-            // killer moves
+            tt.store(ttKey, beta, move, depth, TT_LOWER);
             if(move.gen_type == QUIETS && killermoves[ply][0] != move && killermoves[ply][1] != move)
             {
                 killermoves[ply][1] = killermoves[ply][0];
@@ -107,6 +112,7 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
         }
         if(score > alpha)
         {
+            bestMove = move;
             pos.gameStates.back().bestMove = move;
             alpha = score;
 
@@ -115,10 +121,14 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, int alph
             info.pv_length[ply] = info.pv_length[ply + 1] + 1;
         }
     }
+
+    TTFlag flag = (alpha == origAlpha) ? TT_UPPER : TT_EXACT;
+    tt.store(ttKey, alpha, bestMove, depth, flag);
+
     return alpha;
 }
 
-static SearchInfo iterativeDeepening(Position& pos, int maxDepth, bool silent = false) {
+static SearchInfo iterativeDeepening(Position& pos, TranspositionTable& tt, int maxDepth, bool silent = false) {
     SearchInfo info;
     auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < MAX_PLY; i++)
@@ -131,7 +141,7 @@ static SearchInfo iterativeDeepening(Position& pos, int maxDepth, bool silent = 
         info.seldepth = 0;
         info.nodes = 0;
 
-        int score = negaMax(pos, depth, 0, info);
+        int score = negaMax(pos, depth, 0, info, tt);
 
         auto now = std::chrono::steady_clock::now();
         long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();

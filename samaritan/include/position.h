@@ -7,6 +7,7 @@
 
 #include "chess.h"
 #include "nnue/nnue.h"
+#include "transpositiontable.h"
 
 class Board
 {
@@ -94,6 +95,7 @@ public:
     int enpassants[4] = {-1 ,-1 ,-1, -1};
     PieceType lastCapturedPiece = NONE_PIECE;
     PieceColor lastCapturedPieceColor = NONE_COLOR;
+    uint64_t zobristKey = 0;
 };
 
 class Position
@@ -127,6 +129,11 @@ public:
         state.curTurn = gameStates.back().curTurn;
         state.curTurn++;
 
+        state.zobristKey = gameStates.back().zobristKey;
+        state.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)state.curTurn)];
+        state.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)gameStates.back().curTurn)];
+
+
         // en passant
         std::memcpy(state.enpassants,
             gameStates.back().enpassants,
@@ -153,12 +160,19 @@ public:
         };
 
         // Create the new game state
+        GameState oldState = gameStates.back();
         GameState state = GameState();
-        state.castleRights = gameStates.back().castleRights;
-        state.curTurn = gameStates.back().curTurn;
+        state.castleRights = oldState.castleRights;
+        state.curTurn = oldState.curTurn;
         state.curTurn++;
         state.lastCapturedPiece = board.pieceMailbox[destination];
         state.lastCapturedPieceColor = board.colorMailbox[destination];
+
+        state.zobristKey = oldState.zobristKey;
+
+        // turn
+        state.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)state.curTurn)];
+        state.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)oldState.curTurn)];
 
         if (useEval)
         {
@@ -181,9 +195,13 @@ public:
         }
 
         std::memcpy(state.enpassants,
-            gameStates.back().enpassants,
+            oldState.enpassants,
             sizeof(state.enpassants));
         state.enpassants[__builtin_ctz((unsigned int)state.curTurn)] = -1;
+
+        // Save moving color before board is updated
+        PieceColor movingColor = board.colorMailbox[loc];
+        int movingColorIdx = __builtin_ctz((unsigned int)movingColor);
 
         // Move the piece
         board.pieceMailbox[destination] = board.pieceMailbox[loc];
@@ -205,6 +223,8 @@ public:
             case RED:
                 if (destination == 218)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[219]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[217]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[217] = ROOK;
                     board.colorMailbox[217] = RED;
                     board.pieceMailbox[219] = NONE_PIECE;
@@ -212,6 +232,8 @@ public:
                 }
                 else if (destination == 214)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[212]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[215]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[215] = ROOK;
                     board.colorMailbox[215] = RED;
                     board.pieceMailbox[212] = NONE_PIECE;
@@ -221,6 +243,8 @@ public:
             case BLUE:
                 if (destination == 81)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[49]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[97]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[97] = ROOK;
                     board.colorMailbox[97] = BLUE;
                     board.pieceMailbox[49] = NONE_PIECE;
@@ -228,6 +252,8 @@ public:
                 }
                 else if (destination == 145)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[161]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[129]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[129] = ROOK;
                     board.colorMailbox[129] = BLUE;
                     board.pieceMailbox[161] = NONE_PIECE;
@@ -237,6 +263,8 @@ public:
             case YELLOW:
                 if (destination == 5)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[4]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[6]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[6] = ROOK;
                     board.colorMailbox[6] = YELLOW;
                     board.pieceMailbox[4] = NONE_PIECE;
@@ -244,6 +272,8 @@ public:
                 }
                 else if (destination == 9)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[11]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[8]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[8] = ROOK;
                     board.colorMailbox[8] = YELLOW;
                     board.pieceMailbox[11] = NONE_PIECE;
@@ -253,6 +283,8 @@ public:
             case GREEN:
                 if (destination == 78)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[62]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[94]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[94] = ROOK;
                     board.colorMailbox[94] = GREEN;
                     board.pieceMailbox[62] = NONE_PIECE;
@@ -260,6 +292,8 @@ public:
                 }
                 else if (destination == 142)
                 {
+                    state.zobristKey ^= zobristPieces[board_table[174]][ROOK-1][movingColorIdx];
+                    state.zobristKey ^= zobristPieces[board_table[126]][ROOK-1][movingColorIdx];
                     board.pieceMailbox[126] = ROOK;
                     board.colorMailbox[126] = GREEN;
                     board.pieceMailbox[174] = NONE_PIECE;
@@ -277,19 +311,19 @@ public:
             switch (board.colorMailbox[destination])
             {
             case RED:
-                state.castleRights = gameStates.back().castleRights & ~RED_CASTLING;
+                state.castleRights = oldState.castleRights & ~RED_CASTLING;
                 board.kingTracker[0] = destination;
                 break;
             case BLUE:
-                state.castleRights = gameStates.back().castleRights & ~BLUE_CASTLING;
+                state.castleRights = oldState.castleRights & ~BLUE_CASTLING;
                 board.kingTracker[1] = destination;
                 break;
             case YELLOW:
-                state.castleRights = gameStates.back().castleRights & ~YELLOW_CASTLING;
+                state.castleRights = oldState.castleRights & ~YELLOW_CASTLING;
                 board.kingTracker[2] = destination;
                 break;
             case GREEN:
-                state.castleRights = gameStates.back().castleRights & ~GREEN_CASTLING;
+                state.castleRights = oldState.castleRights & ~GREEN_CASTLING;
                 board.kingTracker[3] = destination;
                 break;
             default:
@@ -308,27 +342,27 @@ public:
             {
             case RED:
                 if (rook == 220)
-                    state.castleRights = gameStates.back().castleRights & ~RED_OO;
+                    state.castleRights = oldState.castleRights & ~RED_OO;
                 else if (rook == 212)
-                    state.castleRights = gameStates.back().castleRights & ~RED_OOO;
+                    state.castleRights = oldState.castleRights & ~RED_OOO;
                 break;
             case BLUE:
                 if (rook == 49)
-                    state.castleRights = gameStates.back().castleRights & ~BLUE_OO;
+                    state.castleRights = oldState.castleRights & ~BLUE_OO;
                 else if (rook == 161)
-                    state.castleRights = gameStates.back().castleRights & ~BLUE_OOO;
+                    state.castleRights = oldState.castleRights & ~BLUE_OOO;
                 break;
             case YELLOW:
                 if (rook == 4)
-                    state.castleRights = gameStates.back().castleRights & ~YELLOW_OO;
+                    state.castleRights = oldState.castleRights & ~YELLOW_OO;
                 else if (rook == 12)
-                    state.castleRights = gameStates.back().castleRights & ~YELLOW_OOO;
+                    state.castleRights = oldState.castleRights & ~YELLOW_OOO;
                 break;
             case GREEN:
                 if (rook == 62)
-                    state.castleRights = gameStates.back().castleRights & ~GREEN_OO;
+                    state.castleRights = oldState.castleRights & ~GREEN_OO;
                 else if (rook == 174)
-                    state.castleRights = gameStates.back().castleRights & ~GREEN_OOO;
+                    state.castleRights = oldState.castleRights & ~GREEN_OOO;
                 break;
             default:
                     throw std::runtime_error("Unknown color given");
@@ -342,21 +376,25 @@ public:
                 switch(board.colorMailbox[destination])
                 {
                     case RED:
+                        state.zobristKey ^= zobristPieces[board_table[loc + NORTH]][PAWN-1][__builtin_ctz((unsigned int)board.colorMailbox[loc + NORTH])];
                         if(useEval) setFeat(loc + NORTH, PAWN, board.colorMailbox[loc + NORTH]);
                         board.pieceMailbox[loc + NORTH] = NONE_PIECE;
                         board.colorMailbox[loc + NORTH] = NONE_COLOR;
                         break;
                     case BLUE:
+                        state.zobristKey ^= zobristPieces[board_table[loc + EAST]][PAWN-1][__builtin_ctz((unsigned int)board.colorMailbox[loc + EAST])];
                         if(useEval) setFeat(loc + EAST, PAWN, board.colorMailbox[loc + EAST]);
                         board.pieceMailbox[loc + EAST] = NONE_PIECE;
                         board.colorMailbox[loc + EAST] = NONE_COLOR;
                         break;
                     case YELLOW:
+                        state.zobristKey ^= zobristPieces[board_table[loc + SOUTH]][PAWN-1][__builtin_ctz((unsigned int)board.colorMailbox[loc + SOUTH])];
                         if(useEval) setFeat(loc + SOUTH, PAWN, board.colorMailbox[loc + SOUTH]);
                         board.pieceMailbox[loc + SOUTH] = NONE_PIECE;
                         board.colorMailbox[loc + SOUTH] = NONE_COLOR;
                         break;
                     case GREEN:
+                        state.zobristKey ^= zobristPieces[board_table[loc + WEST]][PAWN-1][__builtin_ctz((unsigned int)board.colorMailbox[loc + WEST])];
                         if(useEval) setFeat(loc + WEST, PAWN, board.colorMailbox[loc + WEST]);
                         board.pieceMailbox[loc + WEST] = NONE_PIECE;
                         board.colorMailbox[loc + WEST] = NONE_COLOR;
@@ -399,6 +437,32 @@ public:
             }
         }
 
+        // Zobrist: moving piece off origin, onto destination (promotion handled automatically)
+        state.zobristKey ^= zobristPieces[board_table[loc]][movingPiece-1][movingColorIdx];
+        state.zobristKey ^= zobristPieces[board_table[destination]][board.pieceMailbox[destination]-1][movingColorIdx];
+
+        // Zobrist: captured piece at destination
+        if (state.lastCapturedPiece != NONE_PIECE)
+        {
+            int capIdx = __builtin_ctz((unsigned int)state.lastCapturedPieceColor);
+            state.zobristKey ^= zobristPieces[board_table[destination]][state.lastCapturedPiece-1][capIdx];
+        }
+
+        // Zobrist: castling rights — XOR only bits that changed
+        int changedRights = oldState.castleRights ^ state.castleRights;
+        for (int i = 0; i < 8; i++)
+            if (changedRights & (1 << i))
+                state.zobristKey ^= zobristCastle[i];
+
+        // Zobrist: en passant squares — XOR out old, XOR in new
+        for (int player = 0; player < 4; player++)
+        {
+            if (oldState.enpassants[player] != -1)
+                state.zobristKey ^= zobristEnPassant[player][board_table[oldState.enpassants[player]]];
+            if (state.enpassants[player] != -1)
+                state.zobristKey ^= zobristEnPassant[player][board_table[state.enpassants[player]]];
+        }
+
         gameStates.push_back(state);
     }
 
@@ -416,18 +480,20 @@ public:
         };
 
         // Restore the old piece position
+        GameState last = gameStates.back();
+        gameStates.pop_back();
         board.pieceMailbox[loc] = board.pieceMailbox[destination];
         board.colorMailbox[loc] = board.colorMailbox[destination];
-        board.pieceMailbox[destination] = gameStates.back().lastCapturedPiece;
-        board.colorMailbox[destination] = gameStates.back().lastCapturedPieceColor;
+        board.pieceMailbox[destination] = last.lastCapturedPiece;
+        board.colorMailbox[destination] = last.lastCapturedPieceColor;
         if(useEval) 
         {
-            if (gameStates.back().lastCapturedPiece != NONE_PIECE)
+            if (last.lastCapturedPiece != NONE_PIECE)
             {
-                setFeat(destination, gameStates.back().lastCapturedPiece, gameStates.back().lastCapturedPieceColor);
+                setFeat(destination, last.lastCapturedPiece, last.lastCapturedPieceColor);
 
                 // for null move pruning
-                if(gameStates.back().lastCapturedPiece != PAWN)
+                if(last.lastCapturedPiece != PAWN)
                 {
                     board.nonPawnPieceCount[__builtin_ctz((unsigned int) gameStates.back().lastCapturedPieceColor)]++;
                 }
@@ -576,7 +642,6 @@ public:
             }
         }
 
-        gameStates.pop_back();
         if (board.pieceMailbox[loc] == KING)
             board.kingTracker[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))] = loc;
 
@@ -585,7 +650,7 @@ public:
             if (board.pieceMailbox[loc] == KING)
             {
                 refreshNNUE();
-                nnue.init_eval(gameStates.back().curTurn);
+                nnue.init_eval(last.curTurn);
             }
             else
             {
