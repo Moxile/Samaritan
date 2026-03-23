@@ -23,8 +23,8 @@ namespace samaritan
     Engine::Engine() : pos()
     {
 
-        loadFEN(pos, modern_fen);
         initZobrist();
+        loadFEN(pos, modern_fen);
         tt.resize(64);
 
         auto* uciCommand = app.add_subcommand("uci", "[UCI] Start UCI protocol and identify the engine")

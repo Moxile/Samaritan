@@ -70,28 +70,34 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     {
         if (nextPromotion)
         {
-            *moveList++ = Move(loc + offsets[offset][0], loc, QUEEN, 0);
+            *moveList = Move(loc + offsets[offset][0], loc, QUEEN, 1);
             moveList->gen_type = QUEEN_PROMOTION;
             moveList->value = piece_values[QUEEN] - 1;
-            *moveList++ = Move(loc + offsets[offset][0], loc, ROOK, 0);
+            moveList++;
+            *moveList = Move(loc + offsets[offset][0], loc, ROOK, 1);
             moveList->gen_type = UNDERPROMOTION;
             moveList->value = piece_values[ROOK] - 1;
-            *moveList++ = Move(loc + offsets[offset][0], loc, BISHOP, 0);
+            moveList++;
+            *moveList = Move(loc + offsets[offset][0], loc, BISHOP, 1);
             moveList->gen_type = UNDERPROMOTION;
             moveList->value = piece_values[BISHOP] - 1;
-            *moveList++ = Move(loc + offsets[offset][0], loc, KNIGHT, 0);
+            moveList++;
+            *moveList = Move(loc + offsets[offset][0], loc, KNIGHT, 1);
             moveList->gen_type = UNDERPROMOTION;
             moveList->value = piece_values[KNIGHT] - 1;
+            moveList++;
         }
         else
         {
-            *moveList++ = Move(loc + offsets[offset][0], loc, 0, 0);
+            *moveList = Move(loc + offsets[offset][0], loc, 0, 0);
             moveList->gen_type = QUIETS;
+            moveList++;
 
             if (isOnStartRank && pos.board.isEmpty(loc + 2 * offsets[offset][0]))
             {
-                *moveList++ = Move(loc + 2 * offsets[offset][0], loc, 0, 0);
+                *moveList = Move(loc + 2 * offsets[offset][0], loc, 0, 0);
                 moveList->gen_type = QUIETS;
+                moveList++;
             }
         }
     }
@@ -103,48 +109,58 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
         {
             if (nextPromotion)
             {
-                *moveList++ = Move(loc + offsets[offset][1], loc, QUEEN, 0);
+                *moveList = Move(loc + offsets[offset][1], loc, QUEEN, 1);
                 moveList->gen_type = QUEEN_PROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[QUEEN];
-                *moveList++ = Move(loc + offsets[offset][1], loc, ROOK, 0);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][1], loc, ROOK, 1);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[ROOK];
-                *moveList++ = Move(loc + offsets[offset][1], loc, BISHOP, 0);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][1], loc, BISHOP, 1);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[BISHOP];
-                *moveList++ = Move(loc + offsets[offset][1], loc, KNIGHT, 0);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][1], loc, KNIGHT, 1);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[KNIGHT];
+                moveList++;
             }
             else
             {
-                *moveList++ = Move(loc + offsets[offset][1], loc, 0, 0);
+                *moveList = Move(loc + offsets[offset][1], loc, 0, 0);
                 moveList->gen_type = CAPTURES;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - piece_values[PAWN];
+                moveList++;
             }
         }
         else if (rightEnPassant)
         {
             if (nextPromotion)
             {
-                *moveList++ = Move(loc + offsets[offset][1], loc, QUEEN, 3);
+                *moveList = Move(loc + offsets[offset][1], loc, QUEEN, 3);
                 moveList->gen_type = QUEEN_PROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[QUEEN];
-                *moveList++ = Move(loc + offsets[offset][1], loc, ROOK, 3);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][1], loc, ROOK, 3);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[ROOK];
-                *moveList++ = Move(loc + offsets[offset][1], loc, BISHOP, 3);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][1], loc, BISHOP, 3);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[BISHOP];
-                *moveList++ = Move(loc + offsets[offset][1], loc, KNIGHT, 3);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][1], loc, KNIGHT, 3);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[KNIGHT];
+                moveList++;
             }
             else
             {
-                *moveList++ = Move(loc + offsets[offset][1], loc, 0, 2);
+                *moveList = Move(loc + offsets[offset][1], loc, 0, 2);
                 moveList->gen_type = CAPTURES;
                 moveList->value = 10*piece_values[PAWN] - piece_values[PAWN];
+                moveList++;
             }
         }
     }
@@ -156,48 +172,58 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
         {
             if (nextPromotion)
             {
-                *moveList++ = Move(loc + offsets[offset][2], loc, QUEEN, 0);
+                *moveList = Move(loc + offsets[offset][2], loc, QUEEN, 1);
                 moveList->gen_type = QUEEN_PROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[QUEEN];
-                *moveList++ = Move(loc + offsets[offset][2], loc, ROOK, 0);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][2], loc, ROOK, 1);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[ROOK];
-                *moveList++ = Move(loc + offsets[offset][2], loc, BISHOP, 0);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][2], loc, BISHOP, 1);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[BISHOP];
-                *moveList++ = Move(loc + offsets[offset][2], loc, KNIGHT, 0);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][2], loc, KNIGHT, 1);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[KNIGHT];
+                moveList++;
             }
             else
             {
-                *moveList++ = Move(loc + offsets[offset][2], loc, 0, 0);
+                *moveList = Move(loc + offsets[offset][2], loc, 0, 0);
                 moveList->gen_type = CAPTURES;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - piece_values[PAWN];
+                moveList++;
             }
         }
         else if (leftEnPassant)
         {
             if (nextPromotion)
             {
-                *moveList++ = Move(loc + offsets[offset][2], loc, QUEEN, 3);
+                *moveList = Move(loc + offsets[offset][2], loc, QUEEN, 3);
                 moveList->gen_type = QUEEN_PROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[QUEEN];
-                *moveList++ = Move(loc + offsets[offset][2], loc, ROOK, 3);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][2], loc, ROOK, 3);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[ROOK];
-                *moveList++ = Move(loc + offsets[offset][2], loc, BISHOP, 3);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][2], loc, BISHOP, 3);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[BISHOP];
-                *moveList++ = Move(loc + offsets[offset][2], loc, KNIGHT, 3);
+                moveList++;
+                *moveList = Move(loc + offsets[offset][2], loc, KNIGHT, 3);
                 moveList->gen_type = UNDERPROMOTION;
                 moveList->value = 10*piece_values[PAWN] - 1 + piece_values[KNIGHT];
+                moveList++;
             }
             else
             {
-                *moveList++ = Move(loc + offsets[offset][2], loc, 0, 2);
+                *moveList = Move(loc + offsets[offset][2], loc, 0, 2);
                 moveList->gen_type = CAPTURES;
                 moveList->value = 10*piece_values[PAWN] - piece_values[PAWN];
+                moveList++;
             }
         }
     }
@@ -218,14 +244,16 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
         {
             if (pos.board.isEmpty(move))
             {
-                *moveList++ = Move(move, loc, 0, 0);
+                *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = QUIETS;
+                moveList++;
             }
             else if (getTeam(pos.board.colorMailbox[move]) != getTeam(pos.board.colorMailbox[loc]))
             {
-                *moveList++ = Move(move, loc, 0, 0);
+                *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[move]] - piece_values[KNIGHT];
+                moveList++;
             }
         }
     }
@@ -244,15 +272,17 @@ constexpr ExtMove *getStraightLineMoves(const Position &pos, const int loc, ExtM
         }
         if (pos.board.pieceMailbox[destination] != NONE_PIECE)
         {
-            *moveList++ = Move(destination, loc, 0, 0);
+            *moveList = Move(destination, loc, 0, 0);
             moveList->gen_type = CAPTURES;
             moveList->value = 10*piece_values[pos.board.pieceMailbox[destination]] - piece_values[pos.board.pieceMailbox[loc]];
+            moveList++;
             break;
         }
         else
         {
-            *moveList++ = Move(destination, loc, 0, 0);
+            *moveList = Move(destination, loc, 0, 0);
             moveList->gen_type = QUIETS;
+            moveList++;
         }
     }
 
@@ -295,14 +325,16 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         {
             if (pos.board.isEmpty(move))
             {
-                *moveList++ = Move(move, loc, 0, 0);
+                *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = QUIETS;
+                moveList++;
             }
             else if (getTeam(pos.board.colorMailbox[move]) != getTeam(pos.board.colorMailbox[loc]))
             {
-                *moveList++ = Move(move, loc, 0, 0);
+                *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
                 moveList->value = 10*piece_values[pos.board.pieceMailbox[move]] - piece_values[KING];
+                moveList++;
             }
         }
     }
@@ -321,8 +353,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(217, RED, TEAM_RY) && !pos.board.isSquareAttacked(218, RED, TEAM_RY))
                 {
-                    *moveList++ = Move(218, loc, 0, 4);
+                    *moveList = Move(218, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }
@@ -332,8 +365,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(215, RED, TEAM_RY) && !pos.board.isSquareAttacked(214, RED, TEAM_RY))
                 {
-                    *moveList++ = Move(214, loc, 0, 4);
+                    *moveList = Move(214, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }
@@ -345,8 +379,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(81, BLUE, TEAM_BG) && !pos.board.isSquareAttacked(65, BLUE, TEAM_BG))
                 {
-                    *moveList++ = Move(65, loc, 0, 4);
+                    *moveList = Move(65, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }
@@ -356,8 +391,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(113, BLUE, TEAM_BG) && !pos.board.isSquareAttacked(129, BLUE, TEAM_BG))
                 {
-                    *moveList++ = Move(129, loc, 0, 4);
+                    *moveList = Move(129, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }
@@ -369,8 +405,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(5, YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(6, YELLOW, TEAM_RY))
                 {
-                    *moveList++ = Move(5, loc, 0, 4);
+                    *moveList = Move(5, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }
@@ -380,8 +417,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(8, YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(9, YELLOW, TEAM_RY))
                 {
-                    *moveList++ = Move(9, loc, 0, 4);
+                    *moveList = Move(9, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }
@@ -393,8 +431,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(78, GREEN, TEAM_BG) && !pos.board.isSquareAttacked(94, GREEN, TEAM_BG))
                 {
-                    *moveList++ = Move(94, loc, 0, 4);
+                    *moveList = Move(94, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }
@@ -404,8 +443,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 if (!pos.board.isSquareAttacked(126, GREEN, TEAM_BG) && !pos.board.isSquareAttacked(142, GREEN, TEAM_BG))
                 {
-                    *moveList++ = Move(142, loc, 0, 4);
+                    *moveList = Move(142, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList++;
                 }
             }
         }

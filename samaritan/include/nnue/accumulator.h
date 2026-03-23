@@ -29,7 +29,7 @@ public:
     static constexpr size_t FEATURE_COUNT = 160*4*6*160*4; // piece + king (Full KP)
 
     std::vector<uint8_t, AlignedAllocator<uint8_t, 64>> input;
-    std::vector<uint16_t> changes = {};
+    std::vector<uint32_t> changes = {};
 
     int perspective;
 

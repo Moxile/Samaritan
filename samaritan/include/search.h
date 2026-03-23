@@ -47,12 +47,12 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, Transpos
     if (ttEntry && ttEntry->depth >= depth)
     {
         if (ttEntry->flag == TT_EXACT) return ttEntry->score;
-        if (ttEntry->flag == TT_LOWER) alpha = std::max(alpha, ttEntry->score);
-        if (ttEntry->flag == TT_UPPER) beta  = std::min(beta,  ttEntry->score);
+        if (ttEntry->flag == TT_LOWER && ttEntry->score >= beta) return ttEntry->score;
+        if (ttEntry->flag == TT_UPPER && ttEntry->score <= alpha) return ttEntry->score;
         if (alpha >= beta) return ttEntry->score;
     }
 
-    if (depth == 0)
+    if (depth <= 0)
     {
         return qSearch(pos, ply, info, tt, alpha, beta);
     }
@@ -61,6 +61,12 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, Transpos
     bool check = inCheck(pos, curTurn);
     MoveList moves = MoveList(pos);
 
+
+    // check for king capture
+    if(pos.gameStates.back().lastCapturedPiece == KING)
+    {
+        return -999999;
+    }
     // check for mate or stalemate
     if(moves.size() == 0)
     {

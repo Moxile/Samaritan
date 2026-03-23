@@ -40,7 +40,7 @@ add_executable(datagen "${CMAKE_CURRENT_SOURCE_DIR}/datagen.cxx")
 target_compile_options(datagen PRIVATE ${COMMON_COMPILE_OPTIONS})
 target_link_libraries(datagen PRIVATE samaritan_lib CLI11::CLI11)
 
-# Tests
+# Benchmarks
 add_executable(nnue_bench "${CMAKE_CURRENT_SOURCE_DIR}/tests/nnue.cc")
 target_include_directories(nnue_bench PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_options(nnue_bench PRIVATE ${COMMON_COMPILE_OPTIONS})
@@ -48,6 +48,25 @@ target_link_libraries(nnue_bench PRIVATE
     samaritan_lib
     benchmark::benchmark
 )
+
+# GTest correctness tests
+set(TEST_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/movegen_test.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/nnue_correctness_test.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_test.cc"
+)
+
+foreach(test_src ${TEST_SOURCES})
+    get_filename_component(test_name ${test_src} NAME_WE)
+    add_executable(${test_name} ${test_src})
+    target_include_directories(${test_name} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests"
+    )
+    target_compile_options(${test_name} PRIVATE ${COMMON_COMPILE_OPTIONS})
+    target_link_libraries(${test_name} PRIVATE samaritan_lib GTest::gtest_main)
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endforeach()
 
 
 # Install rules

@@ -114,7 +114,7 @@ public:
             std::fill(acc.input.begin(), acc.input.end(), 0);
         for (int sq = 0; sq < 224; sq++)
         {
-            if (board.pieceMailbox[sq] == NONE_PIECE) continue;
+            if (board.pieceMailbox[sq] == NONE_PIECE || board.pieceMailbox[sq] == KING) continue;
             for (auto &acc : nnue.accumulators)
                 for (int k = 0; k < 4; k++)
                     if (board.kingTracker[k] != -1)
@@ -178,11 +178,14 @@ public:
         {
             if(state.lastCapturedPiece != NONE_PIECE)
             {
-                for(auto &accumulator : nnue.accumulators)
+                if(state.lastCapturedPiece != KING)
                 {
-                    for (int k = 0; k < 4; k++)
+                    for(auto &accumulator : nnue.accumulators)
                     {
-                        accumulator.set(accumulator.get_board_feat(destination, state.lastCapturedPiece, state.lastCapturedPieceColor, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
+                        for (int k = 0; k < 4; k++)
+                        {
+                            accumulator.set(accumulator.get_board_feat(destination, state.lastCapturedPiece, state.lastCapturedPieceColor, board.kingTracker[k], static_cast<PieceColor>(1 << k)));
+                        }
                     }
                 }
 
@@ -486,16 +489,19 @@ public:
         board.colorMailbox[loc] = board.colorMailbox[destination];
         board.pieceMailbox[destination] = last.lastCapturedPiece;
         board.colorMailbox[destination] = last.lastCapturedPieceColor;
-        if(useEval) 
+        if(useEval)
         {
             if (last.lastCapturedPiece != NONE_PIECE)
             {
-                setFeat(destination, last.lastCapturedPiece, last.lastCapturedPieceColor);
+                if(last.lastCapturedPiece != KING)
+                {
+                    setFeat(destination, last.lastCapturedPiece, last.lastCapturedPieceColor);
+                }
 
                 // for null move pruning
                 if(last.lastCapturedPiece != PAWN)
                 {
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int) gameStates.back().lastCapturedPieceColor)]++;
+                    board.nonPawnPieceCount[__builtin_ctz((unsigned int) last.lastCapturedPieceColor)]++;
                 }
             }
         }
