@@ -5,6 +5,8 @@ To add:
 */
 
 #include "movegen.h"
+#include "chess.h"
+#include <cstdint>
 #include <stdexcept>
 
 constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *moveList)
@@ -15,7 +17,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     bool rightEnPassant = false;
     bool leftEnPassant = false;
     // checking different scenarios for pawn position
-    switch (pos.board.colorMailbox[loc])
+    switch (pos.board.pieceColor(static_cast<Square>(loc)))
     {
     case RED:
         offset = 1;
@@ -66,7 +68,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     }
 
     // Create move for forward pawn move
-    if (!isInvalidLocation(loc + offsets[offset][0]) && pos.board.isEmpty(loc + offsets[offset][0]))
+    if (!isInvalidLocation(loc + offsets[offset][0]) && pos.board.isEmpty(static_cast<Square>(loc + offsets[offset][0])))
     {
         if (nextPromotion)
         {
@@ -93,7 +95,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             moveList->gen_type = QUIETS;
             moveList++;
 
-            if (isOnStartRank && pos.board.isEmpty(loc + 2 * offsets[offset][0]))
+            if (isOnStartRank && pos.board.isEmpty(static_cast<Square>(loc + 2 * offsets[offset][0])))
             {
                 *moveList = Move(loc + 2 * offsets[offset][0], loc, 0, 0);
                 moveList->gen_type = QUIETS;
@@ -105,32 +107,32 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     // Create move for right diagonal capture
     if (!isInvalidLocation(loc + offsets[offset][1]))
     {
-        if(!pos.board.isEmpty(loc + offsets[offset][1]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][1]]) != getTeam(pos.board.colorMailbox[loc]))
+        if(!pos.board.isEmpty(static_cast<Square>(loc + offsets[offset][1])) && getTeam(pos.board.pieceColor(static_cast<Square>(loc + offsets[offset][1]))) != getTeam(pos.board.pieceColor(static_cast<Square>(loc))))
         {
             if (nextPromotion)
             {
                 *moveList = Move(loc + offsets[offset][1], loc, QUEEN, 1);
                 moveList->gen_type = QUEEN_PROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[QUEEN];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][1]))] - 1 + piece_values[QUEEN];
                 moveList++;
                 *moveList = Move(loc + offsets[offset][1], loc, ROOK, 1);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[ROOK];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][1]))] - 1 + piece_values[ROOK];
                 moveList++;
                 *moveList = Move(loc + offsets[offset][1], loc, BISHOP, 1);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[BISHOP];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][1]))] - 1 + piece_values[BISHOP];
                 moveList++;
                 *moveList = Move(loc + offsets[offset][1], loc, KNIGHT, 1);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - 1 + piece_values[KNIGHT];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][1]))] - 1 + piece_values[KNIGHT];
                 moveList++;
             }
             else
             {
                 *moveList = Move(loc + offsets[offset][1], loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][1]]] - piece_values[PAWN];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][1]))] - piece_values[PAWN];
                 moveList++;
             }
         }
@@ -168,32 +170,32 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     // Create move for left diagonal capture
     if (!isInvalidLocation(loc + offsets[offset][2]))
     {
-        if(!pos.board.isEmpty(loc + offsets[offset][2]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][2]]) != getTeam(pos.board.colorMailbox[loc]))
+        if(!pos.board.isEmpty(static_cast<Square>(loc + offsets[offset][2])) && getTeam(pos.board.pieceColor(static_cast<Square>(loc + offsets[offset][2]))) != getTeam(pos.board.pieceColor(static_cast<Square>(loc))))
         {
             if (nextPromotion)
             {
                 *moveList = Move(loc + offsets[offset][2], loc, QUEEN, 1);
                 moveList->gen_type = QUEEN_PROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[QUEEN];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][2]))] - 1 + piece_values[QUEEN];
                 moveList++;
                 *moveList = Move(loc + offsets[offset][2], loc, ROOK, 1);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[ROOK];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][2]))] - 1 + piece_values[ROOK];
                 moveList++;
                 *moveList = Move(loc + offsets[offset][2], loc, BISHOP, 1);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[BISHOP];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][2]))] - 1 + piece_values[BISHOP];
                 moveList++;
                 *moveList = Move(loc + offsets[offset][2], loc, KNIGHT, 1);
                 moveList->gen_type = UNDERPROMOTION;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - 1 + piece_values[KNIGHT];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][2]))] - 1 + piece_values[KNIGHT];
                 moveList++;
             }
             else
             {
                 *moveList = Move(loc + offsets[offset][2], loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[loc + offsets[offset][2]]] - piece_values[PAWN];
+                moveList->value = 10*piece_values[pos.board.pieceType(static_cast<Square>(loc + offsets[offset][2]))] - piece_values[PAWN];
                 moveList++;
             }
         }
@@ -240,19 +242,21 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
 
     for (int move : moves)
     {
+        Square src = static_cast<Square>(loc);
+        Square des = static_cast<Square>(move);
         if (!isInvalidLocation(move))
         {
-            if (pos.board.isEmpty(move))
+            if (pos.board.isEmpty(des))
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = QUIETS;
                 moveList++;
             }
-            else if (getTeam(pos.board.colorMailbox[move]) != getTeam(pos.board.colorMailbox[loc]))
+            else if (getTeam(pos.board.pieceColor(des)) != getTeam(pos.board.pieceColor(src)))
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[move]] - piece_values[KNIGHT];
+                moveList->value = 10*piece_values[pos.board.pieceType(des)] - piece_values[KNIGHT];
                 moveList++;
             }
         }
@@ -264,17 +268,19 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
 constexpr ExtMove *getStraightLineMoves(const Position &pos, const int loc, ExtMove *moveList, const int increment)
 {
     // Generate moves using a ray-casting approach
-    for (int destination = loc + increment; !isInvalidLocation(destination); destination += increment)
+    for (uint8_t destination = loc + increment; !isInvalidLocation(destination); destination += increment)
     {
-        if (!pos.board.isEmpty(destination) && (getTeam(pos.board.colorMailbox[destination]) == getTeam(pos.board.colorMailbox[loc])))
+        Square src = static_cast<Square>(loc);
+        Square des = static_cast<Square>(destination);
+        if (!pos.board.isEmpty(des) && (getTeam(pos.board.pieceColor(des)) == getTeam(pos.board.pieceColor(src))))
         {
             break;
         }
-        if (pos.board.pieceMailbox[destination] != NONE_PIECE)
+        if (pos.board.pieceType(des) != NONE_PIECE)
         {
             *moveList = Move(destination, loc, 0, 0);
             moveList->gen_type = CAPTURES;
-            moveList->value = 10*piece_values[pos.board.pieceMailbox[destination]] - piece_values[pos.board.pieceMailbox[loc]];
+            moveList->value = 10*piece_values[pos.board.pieceType(des)] - piece_values[pos.board.pieceType(src)];
             moveList++;
             break;
         }
@@ -318,29 +324,32 @@ constexpr ExtMove *getQueenMoves(const Position &pos, const int loc, ExtMove *mo
 
 ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
 {
+    Square src = static_cast<Square>(loc);
     for (int offset = 0; offset < offsetsNum[9]; offset++)
     {
         int move = offsets[9][offset] + loc;
+
+        Square des = static_cast<Square>(move);
         if (!isInvalidLocation(move))
         {
-            if (pos.board.isEmpty(move))
+            if (pos.board.isEmpty(des))
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = QUIETS;
                 moveList++;
             }
-            else if (getTeam(pos.board.colorMailbox[move]) != getTeam(pos.board.colorMailbox[loc]))
+            else if (getTeam(pos.board.pieceColor(des)) != getTeam(pos.board.pieceColor(src)))
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
-                moveList->value = 10*piece_values[pos.board.pieceMailbox[move]] - piece_values[KING];
+                moveList->value = 10*piece_values[pos.board.pieceType(des)] - piece_values[KING];
                 moveList++;
             }
         }
     }
 
     // Castling
-    if (pos.board.isSquareAttacked(loc, pos.gameStates.back().curTurn, getTeam(pos.gameStates.back().curTurn)))
+    if (pos.board.isSquareAttacked(src, pos.gameStates.back().curTurn, getTeam(pos.gameStates.back().curTurn)))
     {
         return moveList; // Cannot castle if the king is in check
     }
@@ -349,9 +358,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
     case RED:
         if (pos.gameStates.back().castleRights & RED_OO)
         {
-            if (pos.board.isEmpty(217) && pos.board.isEmpty(218))
+            if (pos.board.isEmpty(Square(217)) && pos.board.isEmpty(Square(218)))
             {
-                if (!pos.board.isSquareAttacked(217, RED, TEAM_RY) && !pos.board.isSquareAttacked(218, RED, TEAM_RY))
+                if (!pos.board.isSquareAttacked(Square(217), RED, TEAM_RY) && !pos.board.isSquareAttacked(Square(218), RED, TEAM_RY))
                 {
                     *moveList = Move(218, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -361,9 +370,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         }
         if (pos.gameStates.back().castleRights & RED_OOO)
         {
-            if (pos.board.isEmpty(215) && pos.board.isEmpty(214))
+            if (pos.board.isEmpty(Square(215)) && pos.board.isEmpty(Square(214)))
             {
-                if (!pos.board.isSquareAttacked(215, RED, TEAM_RY) && !pos.board.isSquareAttacked(214, RED, TEAM_RY))
+                if (!pos.board.isSquareAttacked(Square(215), RED, TEAM_RY) && !pos.board.isSquareAttacked(Square(214), RED, TEAM_RY))
                 {
                     *moveList = Move(214, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -375,9 +384,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
     case BLUE:
         if (pos.gameStates.back().castleRights & BLUE_OO)
         {
-            if (pos.board.isEmpty(81) && pos.board.isEmpty(65))
+            if (pos.board.isEmpty(Square(81)) && pos.board.isEmpty(Square(65)))
             {
-                if (!pos.board.isSquareAttacked(81, BLUE, TEAM_BG) && !pos.board.isSquareAttacked(65, BLUE, TEAM_BG))
+                if (!pos.board.isSquareAttacked(Square(81), BLUE, TEAM_BG) && !pos.board.isSquareAttacked(Square(65), BLUE, TEAM_BG))
                 {
                     *moveList = Move(65, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -387,9 +396,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         }
         if (pos.gameStates.back().castleRights & BLUE_OOO)
         {
-            if (pos.board.isEmpty(113) && pos.board.isEmpty(129))
+            if (pos.board.isEmpty(Square(113)) && pos.board.isEmpty(Square(129)))
             {
-                if (!pos.board.isSquareAttacked(113, BLUE, TEAM_BG) && !pos.board.isSquareAttacked(129, BLUE, TEAM_BG))
+                if (!pos.board.isSquareAttacked(Square(113), BLUE, TEAM_BG) && !pos.board.isSquareAttacked(Square(129), BLUE, TEAM_BG))
                 {
                     *moveList = Move(129, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -401,9 +410,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
     case YELLOW:
         if (pos.gameStates.back().castleRights & YELLOW_OO)
         {
-            if (pos.board.isEmpty(5) && pos.board.isEmpty(6))
+            if (pos.board.isEmpty(Square(5)) && pos.board.isEmpty(Square(6)))
             {
-                if (!pos.board.isSquareAttacked(5, YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(6, YELLOW, TEAM_RY))
+                if (!pos.board.isSquareAttacked(Square(5), YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(Square(6), YELLOW, TEAM_RY))
                 {
                     *moveList = Move(5, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -413,9 +422,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         }
         if (pos.gameStates.back().castleRights & YELLOW_OOO)
         {
-            if (pos.board.isEmpty(8) && pos.board.isEmpty(9))
+            if (pos.board.isEmpty(Square(8)) && pos.board.isEmpty(Square(9)))
             {
-                if (!pos.board.isSquareAttacked(8, YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(9, YELLOW, TEAM_RY))
+                if (!pos.board.isSquareAttacked(Square(8), YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(Square(9), YELLOW, TEAM_RY))
                 {
                     *moveList = Move(9, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -427,9 +436,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
     case GREEN:
         if (pos.gameStates.back().castleRights & GREEN_OO)
         {
-            if (pos.board.isEmpty(78) && pos.board.isEmpty(94))
+            if (pos.board.isEmpty(Square(78)) && pos.board.isEmpty(Square(94)))
             {
-                if (!pos.board.isSquareAttacked(78, GREEN, TEAM_BG) && !pos.board.isSquareAttacked(94, GREEN, TEAM_BG))
+                if (!pos.board.isSquareAttacked(Square(78), GREEN, TEAM_BG) && !pos.board.isSquareAttacked(Square(94), GREEN, TEAM_BG))
                 {
                     *moveList = Move(94, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -439,9 +448,9 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         }
         if (pos.gameStates.back().castleRights & GREEN_OOO)
         {
-            if (pos.board.isEmpty(126) && pos.board.isEmpty(142))
+            if (pos.board.isEmpty(Square(126)) && pos.board.isEmpty(Square(142)))
             {
-                if (!pos.board.isSquareAttacked(126, GREEN, TEAM_BG) && !pos.board.isSquareAttacked(142, GREEN, TEAM_BG))
+                if (!pos.board.isSquareAttacked(Square(126), GREEN, TEAM_BG) && !pos.board.isSquareAttacked(Square(142), GREEN, TEAM_BG))
                 {
                     *moveList = Move(142, loc, 0, 4);
                     moveList->gen_type = CASTLING;
@@ -467,11 +476,12 @@ ExtMove *generate(Position &pos, ExtMove *moveList)
 {
     ExtMove pseudorandoms[MAX_MOVES];
     ExtMove *move_ptr = pseudorandoms;
-    for (int loc = 0; loc < 224; loc++)
+    for (int loc = 0; loc < 256; loc++)
     {
-        if (pos.board.colorMailbox[loc] == pos.gameStates.back().curTurn)
+        Square sq = static_cast<Square>(loc);
+        if (pos.board.pieceColor(sq) == pos.gameStates.back().curTurn)
         {
-            switch (pos.board.pieceMailbox[loc])
+            switch (pos.board.pieceType(sq))
             {
             case PAWN:
                 move_ptr = getPawnMoves(pos, loc, move_ptr);

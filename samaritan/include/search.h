@@ -1,4 +1,5 @@
 #pragma once
+#include "chess.h"
 #include "movegen.h"
 #include <chrono>
 
@@ -63,7 +64,7 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, Transpos
 
 
     // check for king capture
-    if(pos.gameStates.back().lastCapturedPiece == KING)
+    if(getPieceType(pos.gameStates.back().lastCaptured) == KING)
     {
         return -999999;
     }
@@ -78,7 +79,7 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, Transpos
     }
 
     // null move pruning
-    if (depth >= 3 && allowNullMove && !check && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)pos.gameStates.back().curTurn)] > 1)
+    if (depth >= 3 && allowNullMove && !check && pos.board.nonPawnPieceCount[curTurn] > 1)
     {
        pos.makeNullMove();
        int score = -negaMax(pos, depth - 3, ply + 1, info, tt, -beta, -beta+1, false);

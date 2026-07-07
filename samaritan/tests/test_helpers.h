@@ -1,5 +1,6 @@
 #pragma once
 
+#include "chess.h"
 #include "utility.h"
 #include "movegen.h"
 
@@ -24,7 +25,7 @@ static const std::string START_FEN =
     "3,rP,rP,rP,rP,rP,rP,rP,rP,3/"
     "3,rR,rN,rB,rQ,rK,rB,rN,rR,3";
 
-struct Piece {
+struct PieceSQ {
     int square;
     PieceType type;
     PieceColor color;
@@ -33,12 +34,11 @@ struct Piece {
 // Build a position from scratch without relying on FEN parsing.
 // Requires initZobrist() to have been called.
 inline void setupPosition(Position& pos, PieceColor turn,
-                           const std::vector<Piece>& pieces,
+                           const std::vector<PieceSQ>& pieces,
                            int castleRights = NO_CASTLING)
 {
-    std::memset(pos.board.colorMailbox, NONE_COLOR, sizeof(pos.board.colorMailbox));
-    std::memset(pos.board.pieceMailbox, NONE_PIECE, sizeof(pos.board.pieceMailbox));
-    std::fill(std::begin(pos.board.kingTracker), std::end(pos.board.kingTracker), -1);
+    std::memset(pos.board.mailbox, NONE_PIECE_COLOR, sizeof(pos.board.mailbox));
+    std::fill(std::begin(pos.board.kingTracker), std::end(pos.board.kingTracker), Square::A1);
     std::fill(std::begin(pos.board.nonPawnPieceCount),
               std::end(pos.board.nonPawnPieceCount), 0);
 
@@ -48,15 +48,15 @@ inline void setupPosition(Position& pos, PieceColor turn,
     state.zobristKey = 0;
 
     for (const auto& p : pieces) {
-        pos.board.pieceMailbox[p.square] = p.type;
-        pos.board.colorMailbox[p.square] = p.color;
+        pos.board.mailbox[p.square] = makePiece(p.type, p.color);
+        Square psq = static_cast<Square>(p.square);
         if (p.type == KING)
-            pos.board.kingTracker[__builtin_ctz((unsigned int)p.color)] = p.square;
+            pos.board.kingTracker[p.color] = psq;
         if (p.type != PAWN)
-            pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)p.color)]++;
+            pos.board.nonPawnPieceCount[p.color]++;
         state.zobristKey ^= zobristPieces[board_table[p.square]]
                                          [p.type - 1]
-                                         [__builtin_ctz((unsigned int)p.color)];
+                                         [(unsigned int)p.color];
     }
 
     state.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)turn)];
@@ -75,21 +75,18 @@ inline void setupPosition(Position& pos, PieceColor turn,
 
 // Snapshot of the board arrays so we can compare before/after make+unmake.
 struct BoardSnapshot {
-    PieceColor colorMailbox[224];
-    PieceType  pieceMailbox[224];
-    int        kingTracker[4];
+    Piece mailbox[256];
+    int   kingTracker[4];
 
     static BoardSnapshot capture(const Board& b) {
         BoardSnapshot s;
-        std::memcpy(s.colorMailbox, b.colorMailbox, sizeof(s.colorMailbox));
-        std::memcpy(s.pieceMailbox, b.pieceMailbox, sizeof(s.pieceMailbox));
+        std::memcpy(s.mailbox, b.mailbox, sizeof(s.mailbox));
         std::memcpy(s.kingTracker, b.kingTracker, sizeof(s.kingTracker));
         return s;
     }
 
     bool operator==(const BoardSnapshot& o) const {
-        return std::memcmp(colorMailbox, o.colorMailbox, sizeof(colorMailbox)) == 0
-            && std::memcmp(pieceMailbox, o.pieceMailbox, sizeof(pieceMailbox)) == 0
+        return std::memcmp(mailbox, o.mailbox, sizeof(mailbox)) == 0
             && std::memcmp(kingTracker, o.kingTracker, sizeof(kingTracker)) == 0;
     }
     bool operator!=(const BoardSnapshot& o) const { return !(*this == o); }

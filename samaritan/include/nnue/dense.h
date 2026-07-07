@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <random>
+#include <algorithm>
 
 class AccumulatorLayer {
     std::vector<int16_t, AlignedAllocator<int16_t, 64>> weights; // [Feature * HIDDEN_SIZE]
