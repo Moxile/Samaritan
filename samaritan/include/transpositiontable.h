@@ -4,8 +4,7 @@
 #include <random>
 #include <vector>
 #include <cstring>
-
-
+#include "chess.h"
 
 inline uint64_t zobristPieces[160][6][4];
 inline uint64_t zobristTurn[4];

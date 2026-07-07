@@ -22,7 +22,6 @@ namespace samaritan
 
     Engine::Engine() : pos()
     {
-
         initZobrist();
         loadFEN(pos, modern_fen);
         tt.resize(64);

@@ -64,7 +64,7 @@ class NNUE
             {
                 hidden.refresh(hidden_output_[accumulator.perspective], accumulator.input);
             }
-            evaluation = output.forward(hidden_output_[__builtin_ctz((unsigned int)turn)]);
+            evaluation = output.forward(hidden_output_[turn]);
         }
 
         void incremental_update(PieceColor turn)
@@ -87,7 +87,7 @@ class NNUE
                 accumulator.changes.clear();
             }
 
-            evaluation = output.forward(hidden_output_[__builtin_ctz((unsigned int)turn)]);
+            evaluation = output.forward(hidden_output_[turn]);
         }
 };
 

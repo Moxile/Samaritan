@@ -13,7 +13,7 @@ protected:
 // Starting-position pieces for use with setupPosition.
 // Avoids loadFEN which calls refreshNNUE unconditionally and
 // triggers the KING-feature OOB bug.
-static const std::vector<Piece> START_PIECES = {
+static const std::vector<PieceSQ> START_PIECES = {
     // Yellow back rank (row 0, cols 4-11)
     {4, ROOK, YELLOW}, {5, KNIGHT, YELLOW}, {6, BISHOP, YELLOW},
     {7, KING, YELLOW}, {8, QUEEN, YELLOW}, {9, BISHOP, YELLOW},

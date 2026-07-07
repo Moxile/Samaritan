@@ -1,4 +1,5 @@
 #include "utility.h"
+#include "chess.h"
 
 const void loadFEN(Position &pos, const std::string fen)
 {
@@ -10,7 +11,6 @@ const void loadFEN(Position &pos, const std::string fen)
                     auto c = v | std::views::common;
                     return std::string(c.begin(), c.end()); });
 
-                    
     int part_counter = 1;
     for (auto part : parts)
     {
@@ -18,7 +18,7 @@ const void loadFEN(Position &pos, const std::string fen)
         {
         case 1:
             fen_setPlayerToMove(initialState, part);
-            initialState.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)initialState.curTurn)];
+            initialState.zobristKey ^= zobristTurn[initialState.curTurn];
             break;
         case 2:
             break;
@@ -42,21 +42,21 @@ const void loadFEN(Position &pos, const std::string fen)
     }
 
     // Set Zobrist Key
-    for (int sq = 0; sq < 224; sq++) {
-        if (pos.board.pieceMailbox[sq] == NONE_PIECE) continue;
+    for (int s = 0; s < 256; s++) {
+        Square sq = static_cast<Square>(s);
+        if (pos.board.pieceType(sq) == NONE_PIECE) continue;
         int idx = board_table[sq];
-        int piece = pos.board.pieceMailbox[sq] - 1;
-        int color = __builtin_ctz((unsigned int)pos.board.colorMailbox[sq]);
+        int piece = pos.board.pieceType(sq);
+        int color = pos.board.pieceColor(sq);
         initialState.zobristKey ^= zobristPieces[idx][piece][color];
     }
 
-    initialState.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)initialState.curTurn)];
+    initialState.zobristKey ^= zobristTurn[initialState.curTurn];
 
     int rights = initialState.castleRights;
     for (int i = 0; i < 8; i++)
         if (rights & (1 << i))
             initialState.zobristKey ^= zobristCastle[i];
-
     for (int player = 0; player < 4; player++) {
         int ep = initialState.enpassants[player];
         if (ep != -1)
@@ -137,19 +137,22 @@ const void fen_setBoard(Board &board, const std::string boardFEN)
             catch (std::invalid_argument const &ex)
             {
                 int loc = 16 * row_num + col_num;
+                PieceColor c = NONE_COLOR;
+                PieceType t = NONE_PIECE;
+
                 switch (piece.at(0))
                 {
                 case 'r':
-                    board.colorMailbox[loc] = RED;
+                    c = RED;
                     break;
                 case 'b':
-                    board.colorMailbox[loc] = BLUE;
+                    c = BLUE;
                     break;
                 case 'y':
-                    board.colorMailbox[loc] = YELLOW;
+                    c = YELLOW;
                     break;
                 case 'g':
-                    board.colorMailbox[loc] = GREEN;
+                    c = GREEN;
                     break;
                 default:
                     break;
@@ -158,32 +161,34 @@ const void fen_setBoard(Board &board, const std::string boardFEN)
                 switch (piece.at(1))
                 {
                 case 'P':
-                    board.pieceMailbox[loc] = PieceType::PAWN;
+                    t = PieceType::PAWN;
                     break;
                 case 'N':
-                    board.pieceMailbox[loc] = PieceType::KNIGHT;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    t = PieceType::KNIGHT;
+                    board.nonPawnPieceCount[c]++;
                     break;
                 case 'B':
-                    board.pieceMailbox[loc] = PieceType::BISHOP;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    t = PieceType::BISHOP;
+                    board.nonPawnPieceCount[c]++;
                     break;
                 case 'R':
-                    board.pieceMailbox[loc] = PieceType::ROOK;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    t = PieceType::ROOK;
+                    board.nonPawnPieceCount[c]++;
                     break;
                 case 'Q':
-                    board.pieceMailbox[loc] = PieceType::QUEEN;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    t = PieceType::QUEEN;
+                    board.nonPawnPieceCount[c]++;
                     break;
                 case 'K':
-                    board.pieceMailbox[loc] = PieceType::KING;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
-                    board.kingTracker[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))] = loc;
+                    t = PieceType::KING;
+                    board.nonPawnPieceCount[c]++;
+                    board.kingTracker[c] = static_cast<Square>(loc);
                     break;
                 default:
                     break;
                 }
+
+                board.mailbox[loc] = makePiece(t, c);
 
                 col_num++;
             }
@@ -275,12 +280,12 @@ std::string positionToFEN(const Position &pos)
 
         for (int col = 1; col <= 14; col++)
         {
-            int loc = row * 16 + col;
+            Square loc = static_cast<Square>(row * 16 + col);
             if (baseMailbox[loc] == -1)
             {
                 emptyCount++;
             }
-            else if (pos.board.pieceMailbox[loc] == NONE_PIECE)
+            else if (pos.board.pieceType(loc)== NONE_PIECE)
             {
                 emptyCount++;
             }
@@ -289,14 +294,14 @@ std::string positionToFEN(const Position &pos)
                 flushEmpty();
                 if (!firstCell) board += ',';
                 // color char
-                switch (pos.board.colorMailbox[loc]) {
+                switch (pos.board.pieceColor(loc)) {
                     case RED:    board += 'r'; break;
                     case BLUE:   board += 'b'; break;
                     case YELLOW: board += 'y'; break;
                     case GREEN:  board += 'g'; break;
                     default: break;
                 }
-                board += piece2char(pos.board.pieceMailbox[loc]);
+                board += piece2char(pos.board.pieceType(loc));
                 firstCell = false;
             }
         }
@@ -314,10 +319,10 @@ void print(Position &pos)
         printf("  %02d |", rank);
         for (int file = 1; file <= 14; file++)
         {
-            int loc = (14 - rank) * 16 + file;
-            if (pos.board.pieceMailbox[loc] != NONE_PIECE)
+            Square loc = static_cast<Square>((14 - rank) * 16 + file);
+            if (pos.board.pieceType(loc) != NONE_PIECE)
             {
-                printf(colorToStringColor(pos.board.colorMailbox[loc]), piece2char(pos.board.pieceMailbox[loc]));
+                printf(colorToStringColor(pos.board.pieceColor(loc)), piece2char(pos.board.pieceType(loc)));
             }
             else
             {

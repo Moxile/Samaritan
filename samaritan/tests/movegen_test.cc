@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "chess.h"
 #include "test_helpers.h"
 #include "perft.h"
 
@@ -61,8 +62,8 @@ TEST_F(MoveGenTest, NoSelfCaptures) {
     PieceColor turn = pos.gameStates.back().curTurn;
     MoveList moves(pos);
     for (const auto& m : moves) {
-        if (pos.board.pieceMailbox[m.to()] != NONE_PIECE) {
-            EXPECT_NE(getTeam(pos.board.colorMailbox[m.to()]), getTeam(turn))
+        if (pos.board.pieceType(static_cast<Square>(m.to())) != NONE_PIECE) {
+            EXPECT_NE(getTeam(pos.board.pieceColor(static_cast<Square>(m.to()))), getTeam(turn))
                 << m.toUCI() << " captures a same-team piece";
         }
     }
@@ -332,12 +333,12 @@ TEST_F(MoveGenTest, CastlingMoveMovesKingAndRook) {
     Move castle(218, 216, 0, 4);
     pos.move(castle);
 
-    EXPECT_EQ(pos.board.pieceMailbox[218], KING);
-    EXPECT_EQ(pos.board.colorMailbox[218], RED);
-    EXPECT_EQ(pos.board.pieceMailbox[217], ROOK);
-    EXPECT_EQ(pos.board.colorMailbox[217], RED);
-    EXPECT_EQ(pos.board.pieceMailbox[216], NONE_PIECE);
-    EXPECT_EQ(pos.board.pieceMailbox[219], NONE_PIECE);
+    EXPECT_EQ(pos.board.pieceType(Square(218)), KING);
+    EXPECT_EQ(pos.board.pieceColor(Square(218)), RED);
+    EXPECT_EQ(pos.board.pieceType(Square(217)), ROOK);
+    EXPECT_EQ(pos.board.pieceColor(Square(217)), RED);
+    EXPECT_EQ(pos.board.pieceType(Square(216)), NONE_PIECE);
+    EXPECT_EQ(pos.board.pieceType(Square(219)), NONE_PIECE);
 }
 
 TEST_F(MoveGenTest, CastlingUndoRestoresAll) {
@@ -439,7 +440,7 @@ TEST_F(MoveGenTest, PromotionChangePieceType) {
     for (const auto& m : moves) {
         if (m.from() == 69 && m.promotion() == QUEEN) {
             pos.move(m);
-            EXPECT_EQ(pos.board.pieceMailbox[m.to()], QUEEN)
+            EXPECT_EQ(pos.board.pieceType(static_cast<Square>(m.to())), QUEEN)
                 << "Piece should be QUEEN after queen-promotion";
             pos.undoMove(m);
             break;
