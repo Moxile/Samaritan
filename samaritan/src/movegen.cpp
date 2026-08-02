@@ -14,6 +14,8 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     bool nextPromotion = false;
     bool rightEnPassant = false;
     bool leftEnPassant = false;
+    const auto enpassants = pos.gameStates.back().enpassants;
+    const auto myTeam = getTeam(pos.board.colorMailbox[loc]);
     // checking different scenarios for pawn position
     switch (pos.board.colorMailbox[loc])
     {
@@ -23,9 +25,9 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             isOnStartRank = true;
         if (loc / 16 == 4)
             nextPromotion = true;
-        if (pos.gameStates.back().enpassants[1] == loc + NORTH + WEST)
+        if (enpassants[1] == loc + NORTH + WEST)
             leftEnPassant = true;
-        if (pos.gameStates.back().enpassants[3] == loc + NORTH + EAST)
+        if (enpassants[3] == loc + NORTH + EAST)
             rightEnPassant = true;
         break;
     case BLUE:
@@ -34,9 +36,9 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             isOnStartRank = true;
         if (loc % 16 == 10)
             nextPromotion = true;
-        if (pos.gameStates.back().enpassants[2] == loc + EAST + NORTH)
+        if (enpassants[2] == loc + EAST + NORTH)
             leftEnPassant = true;
-        if (pos.gameStates.back().enpassants[0] == loc + EAST + SOUTH)
+        if (enpassants[0] == loc + EAST + SOUTH)
             rightEnPassant = true;
         break;
     case YELLOW:
@@ -45,9 +47,9 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             isOnStartRank = true;
         if (loc / 16 == 9)
             nextPromotion = true;
-        if (pos.gameStates.back().enpassants[3] == loc + SOUTH + EAST)
+        if (enpassants[3] == loc + SOUTH + EAST)
             leftEnPassant = true;
-        if (pos.gameStates.back().enpassants[1] == loc + SOUTH + WEST)
+        if (enpassants[1] == loc + SOUTH + WEST)
             rightEnPassant = true;
         break;
     case GREEN:
@@ -56,9 +58,9 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
             isOnStartRank = true;
         if (loc % 16 == 5)
             nextPromotion = true;
-        if (pos.gameStates.back().enpassants[0] == loc + WEST + SOUTH)
+        if (enpassants[0] == loc + WEST + SOUTH)
             leftEnPassant = true;
-        if (pos.gameStates.back().enpassants[2] == loc + WEST + NORTH)
+        if (enpassants[2] == loc + WEST + NORTH)
             rightEnPassant = true;
         break;
     default:
@@ -105,7 +107,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     // Create move for right diagonal capture
     if (!isInvalidLocation(loc + offsets[offset][1]))
     {
-        if(!pos.board.isEmpty(loc + offsets[offset][1]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][1]]) != getTeam(pos.board.colorMailbox[loc]))
+        if(!pos.board.isEmpty(loc + offsets[offset][1]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][1]]) != myTeam)
         {
             if (nextPromotion)
             {
@@ -168,7 +170,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     // Create move for left diagonal capture
     if (!isInvalidLocation(loc + offsets[offset][2]))
     {
-        if(!pos.board.isEmpty(loc + offsets[offset][2]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][2]]) != getTeam(pos.board.colorMailbox[loc]))
+        if(!pos.board.isEmpty(loc + offsets[offset][2]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][2]]) != myTeam)
         {
             if (nextPromotion)
             {
@@ -233,6 +235,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
 
 constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *moveList)
 {
+    const auto myTeam = getTeam(pos.board.colorMailbox[loc]);
     // Check all possible knight moves using precomputed offsets
     const int moves[] = {loc + NORTH + NORTH + EAST, loc + NORTH + NORTH + WEST, loc + WEST + WEST + NORTH,
                          loc + WEST + WEST + SOUTH, loc + SOUTH + SOUTH + WEST, loc + SOUTH + SOUTH + EAST,
@@ -248,7 +251,7 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
                 moveList->gen_type = QUIETS;
                 moveList++;
             }
-            else if (getTeam(pos.board.colorMailbox[move]) != getTeam(pos.board.colorMailbox[loc]))
+            else if (getTeam(pos.board.colorMailbox[move]) != myTeam)
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
@@ -263,10 +266,12 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
 
 constexpr ExtMove *getStraightLineMoves(const Position &pos, const int loc, ExtMove *moveList, const int increment)
 {
+    const auto myTeam = getTeam(pos.board.colorMailbox[loc]);
+    const auto myPiece = pos.board.pieceMailbox[loc];
     // Generate moves using a ray-casting approach
     for (int destination = loc + increment; !isInvalidLocation(destination); destination += increment)
     {
-        if (!pos.board.isEmpty(destination) && (getTeam(pos.board.colorMailbox[destination]) == getTeam(pos.board.colorMailbox[loc])))
+        if (!pos.board.isEmpty(destination) && (getTeam(pos.board.colorMailbox[destination]) == myTeam))
         {
             break;
         }
@@ -274,7 +279,7 @@ constexpr ExtMove *getStraightLineMoves(const Position &pos, const int loc, ExtM
         {
             *moveList = Move(destination, loc, 0, 0);
             moveList->gen_type = CAPTURES;
-            moveList->value = 10*piece_values[pos.board.pieceMailbox[destination]] - piece_values[pos.board.pieceMailbox[loc]];
+            moveList->value = 10*piece_values[pos.board.pieceMailbox[destination]] - piece_values[myPiece];
             moveList++;
             break;
         }
@@ -318,6 +323,10 @@ constexpr ExtMove *getQueenMoves(const Position &pos, const int loc, ExtMove *mo
 
 ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
 {
+    const auto &state = pos.gameStates.back();
+    const auto turn = state.curTurn;
+    const auto myTeam = getTeam(turn);
+
     for (int offset = 0; offset < offsetsNum[9]; offset++)
     {
         int move = offsets[9][offset] + loc;
@@ -329,7 +338,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 moveList->gen_type = QUIETS;
                 moveList++;
             }
-            else if (getTeam(pos.board.colorMailbox[move]) != getTeam(pos.board.colorMailbox[loc]))
+            else if (getTeam(pos.board.colorMailbox[move]) != myTeam)
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
@@ -340,32 +349,32 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
     }
 
     // Castling
-    if (pos.board.isSquareAttacked(loc, pos.gameStates.back().curTurn, getTeam(pos.gameStates.back().curTurn)))
+    if (pos.board.isSquareAttacked(loc, turn, myTeam))
     {
         return moveList; // Cannot castle if the king is in check
     }
-    switch (pos.gameStates.back().curTurn)
+    switch (turn)
     {
     case RED:
-        if (pos.gameStates.back().castleRights & RED_OO)
+        if (state.castleRights & RED_OO)
         {
-            if (pos.board.isEmpty(217) && pos.board.isEmpty(218))
+            if (pos.board.isEmpty(J14) && pos.board.isEmpty(K14))
             {
-                if (!pos.board.isSquareAttacked(217, RED, TEAM_RY) && !pos.board.isSquareAttacked(218, RED, TEAM_RY))
+                if (!pos.board.isSquareAttacked(J14, turn, myTeam) && !pos.board.isSquareAttacked(K14, turn, myTeam))
                 {
-                    *moveList = Move(218, loc, 0, 4);
+                    *moveList = Move(K14, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
             }
         }
-        if (pos.gameStates.back().castleRights & RED_OOO)
+        if (state.castleRights & RED_OOO)
         {
-            if (pos.board.isEmpty(215) && pos.board.isEmpty(214))
+            if (pos.board.isEmpty(H14) && pos.board.isEmpty(G14) && pos.board.isEmpty(F14))
             {
-                if (!pos.board.isSquareAttacked(215, RED, TEAM_RY) && !pos.board.isSquareAttacked(214, RED, TEAM_RY))
+                if (!pos.board.isSquareAttacked(H14, turn, myTeam) && !pos.board.isSquareAttacked(G14, turn, myTeam))
                 {
-                    *moveList = Move(214, loc, 0, 4);
+                    *moveList = Move(G14, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
@@ -373,25 +382,25 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         }
         break;
     case BLUE:
-        if (pos.gameStates.back().castleRights & BLUE_OO)
+        if (state.castleRights & BLUE_OO)
         {
-            if (pos.board.isEmpty(81) && pos.board.isEmpty(65))
+            if (pos.board.isEmpty(B7) && pos.board.isEmpty(B6) && pos.board.isEmpty(B5))
             {
-                if (!pos.board.isSquareAttacked(81, BLUE, TEAM_BG) && !pos.board.isSquareAttacked(65, BLUE, TEAM_BG))
+                if (!pos.board.isSquareAttacked(B7, turn, myTeam) && !pos.board.isSquareAttacked(B6, turn, myTeam))
                 {
-                    *moveList = Move(65, loc, 0, 4);
+                    *moveList = Move(B6, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
             }
         }
-        if (pos.gameStates.back().castleRights & BLUE_OOO)
+        if (state.castleRights & BLUE_OOO)
         {
-            if (pos.board.isEmpty(113) && pos.board.isEmpty(129))
+            if (pos.board.isEmpty(B9) && pos.board.isEmpty(B10))
             {
-                if (!pos.board.isSquareAttacked(113, BLUE, TEAM_BG) && !pos.board.isSquareAttacked(129, BLUE, TEAM_BG))
+                if (!pos.board.isSquareAttacked(B9, turn, myTeam) && !pos.board.isSquareAttacked(B10, turn, myTeam))
                 {
-                    *moveList = Move(129, loc, 0, 4);
+                    *moveList = Move(B10, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
@@ -399,25 +408,25 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         }
         break;
     case YELLOW:
-        if (pos.gameStates.back().castleRights & YELLOW_OO)
+        if (state.castleRights & YELLOW_OO)
         {
-            if (pos.board.isEmpty(5) && pos.board.isEmpty(6))
+            if (pos.board.isEmpty(F1) && pos.board.isEmpty(G1))
             {
-                if (!pos.board.isSquareAttacked(5, YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(6, YELLOW, TEAM_RY))
+                if (!pos.board.isSquareAttacked(F1, turn, myTeam) && !pos.board.isSquareAttacked(G1, turn, myTeam))
                 {
-                    *moveList = Move(5, loc, 0, 4);
+                    *moveList = Move(F1, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
             }
         }
-        if (pos.gameStates.back().castleRights & YELLOW_OOO)
+        if (state.castleRights & YELLOW_OOO)
         {
-            if (pos.board.isEmpty(8) && pos.board.isEmpty(9))
+            if (pos.board.isEmpty(I1) && pos.board.isEmpty(J1) && pos.board.isEmpty(K1))
             {
-                if (!pos.board.isSquareAttacked(8, YELLOW, TEAM_RY) && !pos.board.isSquareAttacked(9, YELLOW, TEAM_RY))
+                if (!pos.board.isSquareAttacked(I1, turn, myTeam) && !pos.board.isSquareAttacked(J1, turn, myTeam))
                 {
-                    *moveList = Move(9, loc, 0, 4);
+                    *moveList = Move(J1, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
@@ -425,25 +434,25 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
         }
         break;
     case GREEN:
-        if (pos.gameStates.back().castleRights & GREEN_OO)
+        if (state.castleRights & GREEN_OO)
         {
-            if (pos.board.isEmpty(78) && pos.board.isEmpty(94))
+            if (pos.board.isEmpty(O5) && pos.board.isEmpty(O6))
             {
-                if (!pos.board.isSquareAttacked(78, GREEN, TEAM_BG) && !pos.board.isSquareAttacked(94, GREEN, TEAM_BG))
+                if (!pos.board.isSquareAttacked(O5, turn, myTeam) && !pos.board.isSquareAttacked(O6, turn, myTeam))
                 {
-                    *moveList = Move(94, loc, 0, 4);
+                    *moveList = Move(O5, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
             }
         }
-        if (pos.gameStates.back().castleRights & GREEN_OOO)
+        if (state.castleRights & GREEN_OOO)
         {
-            if (pos.board.isEmpty(126) && pos.board.isEmpty(142))
+            if (pos.board.isEmpty(O8) && pos.board.isEmpty(O9) && pos.board.isEmpty(O10))
             {
-                if (!pos.board.isSquareAttacked(126, GREEN, TEAM_BG) && !pos.board.isSquareAttacked(142, GREEN, TEAM_BG))
+                if (!pos.board.isSquareAttacked(O8, turn, myTeam) && !pos.board.isSquareAttacked(O9, turn, myTeam))
                 {
-                    *moveList = Move(142, loc, 0, 4);
+                    *moveList = Move(O9, loc, 0, 4);
                     moveList->gen_type = CASTLING;
                     moveList++;
                 }
@@ -465,11 +474,13 @@ bool inCheck(const Position &pos, PieceColor color)
 
 ExtMove *generate(Position &pos, ExtMove *moveList)
 {
+    const auto curTurn = pos.gameStates.back().curTurn;
+
     ExtMove pseudorandoms[MAX_MOVES];
     ExtMove *move_ptr = pseudorandoms;
     for (int loc = 0; loc < 224; loc++)
     {
-        if (pos.board.colorMailbox[loc] == pos.gameStates.back().curTurn)
+        if (pos.board.colorMailbox[loc] == curTurn)
         {
             switch (pos.board.pieceMailbox[loc])
             {
@@ -496,7 +507,6 @@ ExtMove *generate(Position &pos, ExtMove *moveList)
             }
         }
     }
-    PieceColor curTurn = pos.gameStates.back().curTurn;
     for (ExtMove *move = pseudorandoms; move != move_ptr; move++)
     {
         pos.move(*move);

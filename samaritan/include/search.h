@@ -41,6 +41,11 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, Transpos
     info.seldepth = std::max(info.seldepth, ply);
     info.nodes++;
 
+    // Copied by value, not bound by reference: pos.move() below push_backs onto
+    // gameStates, which would invalidate any reference into it.
+    const auto curTurn = pos.gameStates.back().curTurn;
+    const auto lastCaptured = pos.gameStates.back().lastCapturedPiece;
+
     uint64_t ttKey = pos.gameStates.back().zobristKey;
     int origAlpha = alpha;
     TTEntry* ttEntry = tt.probe(ttKey);
@@ -57,13 +62,12 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, Transpos
         return qSearch(pos, ply, info, tt, alpha, beta);
     }
 
-    PieceColor curTurn = pos.gameStates.back().curTurn;
     bool check = inCheck(pos, curTurn);
     MoveList moves = MoveList(pos);
 
 
     // check for king capture
-    if(pos.gameStates.back().lastCapturedPiece == KING)
+    if(lastCaptured == KING)
     {
         return -999999;
     }
@@ -78,7 +82,7 @@ static int negaMax(Position& pos, int depth, int ply, SearchInfo& info, Transpos
     }
 
     // null move pruning
-    if (depth >= 3 && allowNullMove && !check && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)pos.gameStates.back().curTurn)] > 1)
+    if (depth >= 3 && allowNullMove && !check && pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)curTurn)] > 1)
     {
        pos.makeNullMove();
        int score = -negaMax(pos, depth - 3, ply + 1, info, tt, -beta, -beta+1, false);

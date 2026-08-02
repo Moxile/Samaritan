@@ -136,53 +136,63 @@ const void fen_setBoard(Board &board, const std::string boardFEN)
             }
             catch (std::invalid_argument const &ex)
             {
-                int loc = 16 * row_num + col_num;
+                const auto loc = 16 * row_num + col_num;
+                auto &squareColor = board.colorMailbox[loc];
+                auto &squarePiece = board.pieceMailbox[loc];
+
                 switch (piece.at(0))
                 {
                 case 'r':
-                    board.colorMailbox[loc] = RED;
+                    squareColor = RED;
                     break;
                 case 'b':
-                    board.colorMailbox[loc] = BLUE;
+                    squareColor = BLUE;
                     break;
                 case 'y':
-                    board.colorMailbox[loc] = YELLOW;
+                    squareColor = YELLOW;
                     break;
                 case 'g':
-                    board.colorMailbox[loc] = GREEN;
+                    squareColor = GREEN;
                     break;
                 default:
                     break;
                 }
 
+                // Guarded: __builtin_ctz(0) is undefined, and a malformed FEN
+                // can leave the square colourless.
+                const auto colorIdx = squareColor != NONE_COLOR
+                                    ? __builtin_ctz((unsigned int)squareColor)
+                                    : 0;
+
                 switch (piece.at(1))
                 {
                 case 'P':
-                    board.pieceMailbox[loc] = PieceType::PAWN;
+                    squarePiece = PieceType::PAWN;
                     break;
                 case 'N':
-                    board.pieceMailbox[loc] = PieceType::KNIGHT;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    squarePiece = PieceType::KNIGHT;
                     break;
                 case 'B':
-                    board.pieceMailbox[loc] = PieceType::BISHOP;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    squarePiece = PieceType::BISHOP;
                     break;
                 case 'R':
-                    board.pieceMailbox[loc] = PieceType::ROOK;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    squarePiece = PieceType::ROOK;
                     break;
                 case 'Q':
-                    board.pieceMailbox[loc] = PieceType::QUEEN;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
+                    squarePiece = PieceType::QUEEN;
                     break;
                 case 'K':
-                    board.pieceMailbox[loc] = PieceType::KING;
-                    board.nonPawnPieceCount[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))]++;
-                    board.kingTracker[__builtin_ctz((unsigned int)(board.colorMailbox[loc]))] = loc;
+                    squarePiece = PieceType::KING;
+                    board.kingTracker[colorIdx] = loc;
                     break;
                 default:
                     break;
+                }
+
+                // Every piece except the pawn counts toward null-move pruning.
+                if (squarePiece != NONE_PIECE && squarePiece != PieceType::PAWN)
+                {
+                    board.nonPawnPieceCount[colorIdx]++;
                 }
 
                 col_num++;
