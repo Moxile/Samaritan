@@ -1,0 +1,43 @@
+# Normalize line endings across the Windows and macOS checkouts.
+#
+# Text files are stored in the repository as LF and checked out with each
+# platform's native ending, so a file edited on Windows and then on macOS no
+# longer shows up as a whole-file diff.
+
+* text=auto
+
+# Source and docs — always treated as text.
+*.h     text
+*.hpp   text
+*.c     text
+*.cc    text
+*.cpp   text
+*.cxx   text
+*.py    text
+*.md    text
+*.txt   text
+*.cmake text
+CMakeLists.txt text
+.gitignore     text
+.gitattributes text
+
+# Binary — never normalized, never diffed as text. Mangling a NNUE weights
+# file by rewriting \r\n inside it would silently corrupt the network.
+*.bin    binary
+*.nnue   binary
+*.pt     binary
+*.pth    binary
+*.npy    binary
+*.npz    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.a      binary
+*.o      binary
+*.so     binary
+*.dylib  binary
+*.dll    binary
+*.exe    binary
