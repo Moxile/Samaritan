@@ -3,6 +3,15 @@
 const void loadFEN(Position &pos, const std::string fen)
 {
     pos.gameStates.clear();
+
+    // Reset every piece of board state the FEN is about to define. Without this
+    // a second loadFEN into the same Position keeps the previous position's
+    // pieces and double-counts kingTracker / nonPawnPieceCount.
+    std::memset(pos.board.pieceMailbox, NONE_PIECE, sizeof(pos.board.pieceMailbox));
+    std::memset(pos.board.colorMailbox, NONE_COLOR, sizeof(pos.board.colorMailbox));
+    std::fill(std::begin(pos.board.kingTracker), std::end(pos.board.kingTracker), -1);
+    std::fill(std::begin(pos.board.nonPawnPieceCount), std::end(pos.board.nonPawnPieceCount), 0);
+
     GameState initialState;
     initialState.zobristKey = 0;
     auto parts = fen | std::views::split('-') | std::views::transform([](auto v)
@@ -17,8 +26,8 @@ const void loadFEN(Position &pos, const std::string fen)
         switch (part_counter)
         {
         case 1:
+            // The turn is folded into the key once, after the board is parsed.
             fen_setPlayerToMove(initialState, part);
-            initialState.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)initialState.curTurn)];
             break;
         case 2:
             break;
@@ -62,6 +71,8 @@ const void loadFEN(Position &pos, const std::string fen)
         if (ep != -1)
             initialState.zobristKey ^= zobristEnPassant[player][board_table[ep]];
     }
+
+    pos.board.rebuildPieceList();
 
     // init accumulator
     pos.refreshNNUE();

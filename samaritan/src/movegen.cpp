@@ -7,65 +7,54 @@ To add:
 #include "movegen.h"
 #include <stdexcept>
 
+// Per-colour pawn geometry, so the hot path is a table read rather than a
+// four-way switch executed once per pawn. `useRow` picks whether a colour's
+// ranks run along rows (RED/YELLOW) or columns (BLUE/GREEN).
+struct PawnCfg
+{
+    int8_t o;          // index into offsets[]
+    int8_t useRow;     // 1 -> compare loc/16, 0 -> compare loc%16
+    int8_t startVal;   // value identifying the double-push rank
+    int8_t promoVal;   // value identifying the rank before promotion
+    int8_t epL;        // enpassants[] slot reachable via offsets[o][2]
+    int8_t epR;        // enpassants[] slot reachable via offsets[o][1]
+};
+constexpr PawnCfg pawnCfg[5] = {
+    { 0, 0,  0,  0, 0, 0 },
+    { 1, 1, 12,  4, 1, 3 },   // RED    moves north
+    { 2, 0,  2, 10, 2, 0 },   // BLUE   moves east
+    { 3, 1,  1,  9, 3, 1 },   // YELLOW moves south
+    { 4, 0, 13,  5, 0, 2 },   // GREEN  moves west
+};
+
 constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *moveList)
 {
-    int offset = -1;
-    bool isOnStartRank = false;
-    bool nextPromotion = false;
-    bool rightEnPassant = false;
-    bool leftEnPassant = false;
     const auto enpassants = pos.gameStates.back().enpassants;
-    const auto myTeam = getTeam(pos.board.colorMailbox[loc]);
-    // checking different scenarios for pawn position
-    switch (pos.board.colorMailbox[loc])
-    {
-    case RED:
-        offset = 1;
-        if (loc / 16 == 12)
-            isOnStartRank = true;
-        if (loc / 16 == 4)
-            nextPromotion = true;
-        if (enpassants[1] == loc + NORTH + WEST)
-            leftEnPassant = true;
-        if (enpassants[3] == loc + NORTH + EAST)
-            rightEnPassant = true;
-        break;
-    case BLUE:
-        offset = 2;
-        if (loc % 16 == 2)
-            isOnStartRank = true;
-        if (loc % 16 == 10)
-            nextPromotion = true;
-        if (enpassants[2] == loc + EAST + NORTH)
-            leftEnPassant = true;
-        if (enpassants[0] == loc + EAST + SOUTH)
-            rightEnPassant = true;
-        break;
-    case YELLOW:
-        offset = 3;
-        if (loc / 16 == 1)
-            isOnStartRank = true;
-        if (loc / 16 == 9)
-            nextPromotion = true;
-        if (enpassants[3] == loc + SOUTH + EAST)
-            leftEnPassant = true;
-        if (enpassants[1] == loc + SOUTH + WEST)
-            rightEnPassant = true;
-        break;
-    case GREEN:
-        offset = 4;
-        if (loc % 16 == 13)
-            isOnStartRank = true;
-        if (loc % 16 == 5)
-            nextPromotion = true;
-        if (enpassants[0] == loc + WEST + SOUTH)
-            leftEnPassant = true;
-        if (enpassants[2] == loc + WEST + NORTH)
-            rightEnPassant = true;
-        break;
-    default:
-        throw std::runtime_error("Unknown color given");
-    }
+    const auto myColor = pos.board.colorMailbox[loc];
+    const auto myTeam = getTeam(myColor);
+
+    const PawnCfg &cfg = pawnCfg[__builtin_ctz((unsigned int)myColor) + 1];
+    const int offset = cfg.o;
+    const int rank = cfg.useRow ? (loc / 16) : (loc % 16);
+    const bool isOnStartRank  = (rank == cfg.startVal);
+    const bool nextPromotion  = (rank == cfg.promoVal);
+
+    // En passant is only real if the skipped square is still empty AND the pawn
+    // that ran past it is still standing there. Without both guards a stale
+    // en-passant square lets us "capture" whatever moved onto the victim square
+    // (or land on a teammate), which corrupts the board on undo.
+    const int victimSq = loc + offsets[offset][0];
+    const bool victimIsEnemyPawn =
+        !isInvalidLocation(victimSq)
+        && pos.board.pieceMailbox[victimSq] == PAWN
+        && !isOnTeam(pos.board.colorMailbox[victimSq], myTeam);
+
+    const int epLeftSq  = loc + offsets[offset][2];
+    const int epRightSq = loc + offsets[offset][1];
+    const bool leftEnPassant  = victimIsEnemyPawn && enpassants[cfg.epL] == epLeftSq
+                             && !isInvalidLocation(epLeftSq)  && pos.board.isEmpty(epLeftSq);
+    const bool rightEnPassant = victimIsEnemyPawn && enpassants[cfg.epR] == epRightSq
+                             && !isInvalidLocation(epRightSq) && pos.board.isEmpty(epRightSq);
 
     // Create move for forward pawn move
     if (!isInvalidLocation(loc + offsets[offset][0]) && pos.board.isEmpty(loc + offsets[offset][0]))
@@ -107,7 +96,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     // Create move for right diagonal capture
     if (!isInvalidLocation(loc + offsets[offset][1]))
     {
-        if(!pos.board.isEmpty(loc + offsets[offset][1]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][1]]) != myTeam)
+        if(!pos.board.isEmpty(loc + offsets[offset][1]) && !isOnTeam(pos.board.colorMailbox[loc + offsets[offset][1]], myTeam))
         {
             if (nextPromotion)
             {
@@ -170,7 +159,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     // Create move for left diagonal capture
     if (!isInvalidLocation(loc + offsets[offset][2]))
     {
-        if(!pos.board.isEmpty(loc + offsets[offset][2]) && getTeam(pos.board.colorMailbox[loc + offsets[offset][2]]) != myTeam)
+        if(!pos.board.isEmpty(loc + offsets[offset][2]) && !isOnTeam(pos.board.colorMailbox[loc + offsets[offset][2]], myTeam))
         {
             if (nextPromotion)
             {
@@ -251,7 +240,7 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
                 moveList->gen_type = QUIETS;
                 moveList++;
             }
-            else if (getTeam(pos.board.colorMailbox[move]) != myTeam)
+            else if (!isOnTeam(pos.board.colorMailbox[move], myTeam))
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
@@ -271,7 +260,7 @@ constexpr ExtMove *getStraightLineMoves(const Position &pos, const int loc, ExtM
     // Generate moves using a ray-casting approach
     for (int destination = loc + increment; !isInvalidLocation(destination); destination += increment)
     {
-        if (!pos.board.isEmpty(destination) && (getTeam(pos.board.colorMailbox[destination]) == myTeam))
+        if (!pos.board.isEmpty(destination) && isOnTeam(pos.board.colorMailbox[destination], myTeam))
         {
             break;
         }
@@ -338,7 +327,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 moveList->gen_type = QUIETS;
                 moveList++;
             }
-            else if (getTeam(pos.board.colorMailbox[move]) != myTeam)
+            else if (!isOnTeam(pos.board.colorMailbox[move], myTeam))
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = CAPTURES;
@@ -466,57 +455,210 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
     return moveList;
 }
 
+// ---------------------------------------------------------------------------
+//  Check and pin detection
+// ---------------------------------------------------------------------------
+
+// True when a slider of type `pie` attacks along the ray `dir`.
+constexpr bool slidesAlong(PieceType pie, int dir)
+{
+    const bool diagonal = (dir == -17 || dir == -15 || dir == 15 || dir == 17);
+    if (pie == QUEEN)  return true;
+    if (pie == BISHOP) return diagonal;
+    if (pie == ROOK)   return !diagonal;
+    return false;
+}
+
+// Fill `info` with everything move generation needs to decide legality without
+// touching the board: who is giving check, and which of our pieces are pinned.
+//
+// The eight sliding rays are walked once each. The first occupant of a ray is
+// either a checker (enemy slider aligned with the king) or a potential pin
+// victim; in the latter case we keep walking to see whether an enemy slider
+// stands behind it. Knight and pawn checks cannot be blocked, so they are found
+// by looking backwards from the king instead of outwards.
+void computeCheckInfo(const Position &pos, PieceColor us, CheckInfo &info)
+{
+    info = CheckInfo();
+    info.valid = true;
+
+    const int ksq = pos.board.kingTracker[__builtin_ctz((unsigned int)us)];
+    if (ksq < 0) return;                       // king already captured
+
+    const PieceColor myTeam = getTeam(us);
+    const Board &b = pos.board;
+
+    auto addChecker = [&](int sq, int dir) {
+        if (info.checkerCount == 0) { info.checkerSq = sq; info.checkerDir = dir; }
+        if (info.checkerCount < 2) info.checkerCount++;
+    };
+
+    // --- sliding rays: checkers and pins in one pass ---
+    for (int i = 0; i < offsetsNum[8]; ++i)
+    {
+        const int dir = offsets[8][i];
+
+        int n = ksq + dir;
+        while (!isInvalidLocation(n) && b.pieceMailbox[n] == NONE_PIECE) n += dir;
+        if (isInvalidLocation(n)) continue;
+
+        const PieceType firstPie = b.pieceMailbox[n];
+        const PieceColor firstCol = b.colorMailbox[n];
+
+        if (!isOnTeam(firstCol, myTeam))
+        {
+            // First occupant is an enemy: it checks us if it slides this way.
+            if (slidesAlong(firstPie, dir)) addChecker(n, dir);
+            continue;                          // an enemy blocker cannot be pinned by us
+        }
+
+        // First occupant is ours or our partner's. Only our own pieces are worth
+        // recording, since we can only move those.
+        const int blocker = n;
+        n += dir;
+        while (!isInvalidLocation(n) && b.pieceMailbox[n] == NONE_PIECE) n += dir;
+        if (isInvalidLocation(n)) continue;
+
+        if (!isOnTeam(b.colorMailbox[n], myTeam) && slidesAlong(b.pieceMailbox[n], dir)
+            && b.colorMailbox[blocker] == us)
+        {
+            info.pinSq[info.pinCount]  = blocker;
+            info.pinDir[info.pinCount] = dir;
+            info.pinCount++;
+        }
+    }
+
+    // --- knight checks ---
+    for (int i = 0; i < offsetsNum[5]; ++i)
+    {
+        const int n = ksq + knightOffsets[i];
+        if (isInvalidLocation(n)) continue;
+        if (b.pieceMailbox[n] == KNIGHT && !isOnTeam(b.colorMailbox[n], myTeam))
+            addChecker(n, 0);
+    }
+
+    // --- pawn checks ---
+    // An enemy pawn of colour e checks us when it sits on one of the squares
+    // from which its own capture offsets land on our king.
+    for (int c = 0; c < 4; ++c)
+    {
+        const PieceColor e = static_cast<PieceColor>(1 << c);
+        if (getTeam(e) == myTeam) continue;
+        for (int k = 1; k <= 2; ++k)
+        {
+            const int n = ksq - offsets[c + 1][k];
+            if (isInvalidLocation(n)) continue;
+            if (b.pieceMailbox[n] == PAWN && b.colorMailbox[n] == e)
+                addChecker(n, 0);
+        }
+    }
+}
+
 bool inCheck(const Position &pos, PieceColor color)
 {
     // Return true if the king is in check.
     return pos.board.isSquareAttacked(pos.board.kingTracker[__builtin_ctz(color)], color, getTeam(color));
 }
 
+// Is `to` reachable from `ksq` along `dir` without passing a blocker?
+// `from` is skipped because that is the moving piece's own square.
+static inline bool onPinRay(const Position &pos, int ksq, int dir, int from, int to)
+{
+    for (int n = ksq + dir; !isInvalidLocation(n); n += dir)
+    {
+        if (n == to) return true;
+        if (n != from && pos.board.pieceMailbox[n] != NONE_PIECE) return false;
+    }
+    return false;
+}
+
+// Does `to` interpose between our king and the single checking slider?
+static inline bool blocksCheck(int ksq, const CheckInfo &info, int to)
+{
+    if (info.checkerDir == 0) return false;          // knight or pawn: cannot be blocked
+    for (int n = ksq + info.checkerDir; n != info.checkerSq; n += info.checkerDir)
+        if (n == to) return true;
+    return false;
+}
+
+// Legality without touching the board, except for en passant, which is rare
+// enough that make/unmake remains the cheapest correct answer.
+static inline bool isLegalMove(Position &pos, const ExtMove &m, const CheckInfo &info,
+                               int ksq, PieceColor us)
+{
+    const int from = m.from();
+    const int to   = m.to();
+    const int special = m.special_move();
+
+    if (special == 2 || special == 3)            // en passant (and ep-promotion)
+    {
+        pos.move(m);
+        const bool ok = !inCheck(pos, us);
+        pos.undoMove(m);
+        return ok;
+    }
+
+    if (from == ksq)
+    {
+        // The king must not shadow the ray it is trying to step out of, so it is
+        // lifted off the board before the destination is tested.
+        Board &b = pos.board;
+        b.pieceMailbox[ksq] = NONE_PIECE;
+        b.colorMailbox[ksq] = NONE_COLOR;
+        const bool attacked = b.isSquareAttacked(to, us, getTeam(us));
+        b.pieceMailbox[ksq] = KING;
+        b.colorMailbox[ksq] = us;
+        return !attacked;
+    }
+
+    // Any non-king move while two pieces give check is hopeless.
+    if (info.checkerCount >= 2) return false;
+
+    if (info.checkerCount == 1 && to != info.checkerSq && !blocksCheck(ksq, info, to))
+        return false;
+
+    const int pin = info.pinRayOf(from);
+    if (pin && !onPinRay(pos, ksq, pin, from, to)) return false;
+
+    return true;
+}
+
 ExtMove *generate(Position &pos, ExtMove *moveList)
 {
     const auto curTurn = pos.gameStates.back().curTurn;
+    CheckInfo &info = pos.gameStates.back().checkInfo;
+    computeCheckInfo(pos, curTurn, info);
 
-    ExtMove pseudorandoms[MAX_MOVES];
-    ExtMove *move_ptr = pseudorandoms;
-    for (int loc = 0; loc < 224; loc++)
+    const int ksq = pos.board.kingTracker[__builtin_ctz((unsigned int)curTurn)];
+
+    // Generate straight into the caller's buffer; no second staging array.
+    ExtMove *end = moveList;
+    const int me = __builtin_ctz((unsigned int)curTurn);
+    const int *myPieces = pos.board.pieceList[me];
+    const int myCount = pos.board.pieceCount[me];
+    for (int i = 0; i < myCount; ++i)
     {
-        if (pos.board.colorMailbox[loc] == curTurn)
+        const int loc = myPieces[i];
+        switch (pos.board.pieceMailbox[loc])
         {
-            switch (pos.board.pieceMailbox[loc])
-            {
-            case PAWN:
-                move_ptr = getPawnMoves(pos, loc, move_ptr);
-                break;
-            case KNIGHT:
-                move_ptr = getKnightMoves(pos, loc, move_ptr);
-                break;
-            case BISHOP:
-                move_ptr = getBishopMoves(pos, loc, move_ptr);
-                break;
-            case ROOK:
-                move_ptr = getRookMoves(pos, loc, move_ptr);
-                break;
-            case QUEEN:
-                move_ptr = getQueenMoves(pos, loc, move_ptr);
-                break;
-            case KING:
-                move_ptr = getKingMoves(pos, loc, move_ptr);
-                break;
-            default:
-                break;
-            }
+        case PAWN:   end = getPawnMoves(pos, loc, end);   break;
+        case KNIGHT: end = getKnightMoves(pos, loc, end); break;
+        case BISHOP: end = getBishopMoves(pos, loc, end); break;
+        case ROOK:   end = getRookMoves(pos, loc, end);   break;
+        case QUEEN:  end = getQueenMoves(pos, loc, end);  break;
+        case KING:   end = getKingMoves(pos, loc, end);   break;
+        default: break;
         }
     }
-    for (ExtMove *move = pseudorandoms; move != move_ptr; move++)
+
+    // Filter in place: overwrite an illegal move with the last one and shrink.
+    ExtMove *cur = moveList;
+    while (cur != end)
     {
-        pos.move(*move);
-        if (!inCheck(pos, curTurn))
-        {
-            *moveList++ = *move;
-        }
-        pos.undoMove(*move);
+        if (isLegalMove(pos, *cur, info, ksq, curTurn)) cur++;
+        else *cur = *(--end);
     }
-    return moveList;
+    return end;
 }
 MoveList::MoveList(Position& pos) : last(generate(pos, moveList)) {}
 

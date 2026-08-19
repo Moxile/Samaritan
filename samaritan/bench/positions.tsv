@@ -1,0 +1,12 @@
+# Samaritan movegen benchmark corpus.
+# label<TAB>pieces<TAB>legal_moves<TAB>fen   -- all positions reachable by legal play
+start	64	20	R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-3,yR,yN,yB,yK,yQ,yB,yN,yR,3/3,yP,yP,yP,yP,yP,yP,yP,yP,3/14/bR,bP,10,gP,gR/bN,bP,10,gP,gN/bB,bP,10,gP,gB/bQ,bP,10,gP,gK/bK,bP,10,gP,gQ/bB,bP,10,gP,gB/bN,bP,10,gP,gN/bR,bP,10,gP,gR/14/3,rP,rP,rP,rP,rP,rP,rP,rP,3/3,rR,rN,rB,rQ,rK,rB,rN,rR,3
+d64	64	36	Y-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-3,yR,yN,yB,yK,yQ,yB,yN,yR,3/3,yP,yP,yP,1,yP,yP,yP,yP,3/6,bB,7/bR,bP,4,yP,5,gP,gR/bN,bP,9,gP,1,gN/bB,bP,10,gP,gB/bQ,bP,10,gP,gK/bK,1,bP,9,gP,gQ/1,bP,10,gP,gB/bN,bP,10,gP,gN/bR,bP,10,gP,gR/5,rN,3,rP,4/3,rP,rP,rP,rP,rP,rP,1,rP,3/3,rR,1,rB,rQ,rK,rB,rN,rR,3
+d56	56	71	R-0,0,0,0-1,1,0,1-1,1,0,1-0,0,0,0-0-3,yR,1,yB,3,yN,yR,3/3,yP,yP,yK,1,yP,yP,1,yP,3/7,gB,1,yP,4/bR,2,yN,8,gP,gR/bN,bP,10,yB,gN/bB,1,yQ,9,gP,gB/1,bP,10,gP,gK/bK,2,bP,6,gP,1,gQ,1/bB,bP,9,rQ,2/bN,1,bP,6,rB,2,gP,gN/bR,bP,4,rP,rP,4,rN,gR/14/3,rP,rP,rP,2,rP,rP,rP,3/3,rR,rN,2,rK,rB,1,rR,3
+d44	44	58	Y-0,0,0,0-0,0,0,0-0,0,1,1-0,0,0,0-0-4,yN,1,yK,yQ,yB,1,yR,3/5,yP,2,yP,5/4,yP,3,yN,1,yP,3/1,bR,bP,3,yP,yP,1,yP,2,gP,1/14/1,bP,8,gR,3/bQ,bN,bP,10,gK/bK,bP,10,gP,1/bB,2,yR,8,gP,1/bN,1,bP,8,gP,2/1,bR,9,gN,gP,gR/3,rP,10/3,rP,1,rP,rK,rP,rP,rR,4/3,rR,4,rB,5
+d32	32	64	Y-0,0,0,0-0,1,0,0-0,0,0,0-0,0,0,0-0-4,yK,1,yR,7/3,yP,1,yP,yP,yN,1,yB,4/8,yP,5/14/bN,2,bP,1,yN,5,yQ,2/2,bP,11/10,gP,3/bK,2,bP,8,rQ,gK/3,bP,8,gP,gQ/1,bP,10,gR,gN/3,rR,4,rP,5/14/4,rP,rP,rN,7/5,rB,1,rK,2,rB,3
+d22	22	71	Y-0,0,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-3,yR,10/3,yP,2,yK,2,yP,4/14/14/3,bP,yB,7,yQ,1/12,gP,1/3,yR,10/bK,rB,10,gP,gK/1,bP,1,bN,7,gP,2/13,gN/3,rP,10/14/5,rP,3,rK,4/3,rR,6,rR,3
+d14	14	63	Y-0,0,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-4,yQ,5,yR,3/8,yK,1,yP,3/4,yN,9/5,yP,4,gP,3/14/11,gK,2/9,yR,4/3,bK,10/14/3,rP,10/14/3,rR,10/4,rP,9/9,rK,4
+d08	8	56	R-0,0,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-14/14/14/14/14/9,rR,4/12,gK,1/14/14/1,bK,12/10,rR,1,yK,1/9,rP,4/14/4,rK,3,rN,5
+chk	39	8	Y-0,0,0,0-1,0,1,0-0,0,0,0-0,0,0,0-0-3,yR,2,yK,2,yN,4/14/5,yN,4,yR,3/3,bP,3,yP,1,gQ,gP,2,gR/2,bP,5,yP,4,gN/bR,bP,12/bQ,bP,9,gK,2/1,bP,bK,9,gP,1/12,gP,1/bN,2,bP,9,gN/bR,bP,1,rP,1,rP,1,rP,2,gP,1,gP,gR/8,rN,5/5,rN,2,rP,5/5,bB,1,rK,rB,5
+open	6	56	R-0,0,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-3,3,yK,4,3/3,8,3/3,8,3/14/14/14/14/bK,5,rQ,rR,5,gK/14/14/14/3,8,3/3,8,3/3,3,rK,4,3

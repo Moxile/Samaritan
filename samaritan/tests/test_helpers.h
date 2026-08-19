@@ -64,6 +64,8 @@ inline void setupPosition(Position& pos, PieceColor turn,
         if (castleRights & (1 << i))
             state.zobristKey ^= zobristCastle[i];
 
+    pos.board.rebuildPieceList();
+
     pos.gameStates.clear();
     pos.gameStates.push_back(state);
 

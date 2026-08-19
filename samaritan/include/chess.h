@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <cstdint>
+#include <array>
 
 enum PieceType
 {
@@ -80,48 +81,90 @@ enum Square : uint8_t
     A16, B16, C16, D16, E16, F16, G16, H16, I16, J16, K16, L16, M16, N16, O16, P16,
 };
 
+// Ray walking and knight probes step off the board before they are rejected, so
+// the validity table is padded to cover every index those offsets can reach:
+// from 1-33 on the low side up to 219+33 on the high side. That turns the
+// bounds test into a single load, which matters because this is the hottest
+// predicate in the engine.
+inline constexpr int SQ_GUARD = 33;
+inline constexpr int SQ_TABLE_SIZE = 224 + 2 * SQ_GUARD;   // 290
+
+inline constexpr auto squareValidTable = [] {
+    std::array<bool, SQ_TABLE_SIZE> t{};
+    for (int i = 0; i < SQ_TABLE_SIZE; ++i)
+    {
+        const int loc = i - SQ_GUARD;
+        t[i] = (loc >= 1 && loc <= 220 && baseMailbox[loc] != -1);
+    }
+    return t;
+}();
+
 constexpr inline bool isInvalidLocation(int location) {
-    return location < 1 || location > 220 || baseMailbox[location] == -1;
+    return !squareValidTable[location + SQ_GUARD];
 }
 
+// PieceColor is a 4-bit mask (RED=1, BLUE=2, YELLOW=4, GREEN=8), so the colour
+// operations below are pure bit twiddling: teammates sit 2 bits apart and the
+// turn order is a rotate-left within those 4 bits. Branchless by construction.
+constexpr int COLOR_MASK = RED | BLUE | YELLOW | GREEN;
+
+// Smear each colour onto its partner: RED<->YELLOW, BLUE<->GREEN.
 constexpr inline PieceColor getTeam(PieceColor color)
 {
-    switch (color)
-    {
-        case RED: return TEAM_RY;
-        case BLUE: return TEAM_BG;
-        case YELLOW: return TEAM_RY;
-        case GREEN: return TEAM_BG;
-        default: return NONE_COLOR;
-    }
+    const int c = static_cast<int>(color);
+    return static_cast<PieceColor>((c | (c << 2) | (c >> 2)) & COLOR_MASK);
 }
 
+// Rotate left by n within the 4 colour bits.
+constexpr PieceColor operator+(PieceColor color, int n)
+{
+    const int c = static_cast<int>(color);
+    const int r = n & 3;
+    return static_cast<PieceColor>(((c << r) | (c >> (4 - r))) & COLOR_MASK);
+}
 
 constexpr PieceColor operator++(PieceColor& color, int)
 {
-    PieceColor oldColor = color; // Store the current value
-    switch(color)
-    {
-        case RED: color = BLUE; break;
-        case BLUE: color = YELLOW; break;
-        case YELLOW: color = GREEN; break;
-        case GREEN: color = RED; break;
-        default: break;
-    }
-    return oldColor; // Return the old value
+    const PieceColor oldColor = color;
+    color = oldColor + 1;
+    return oldColor;
 }
 
-constexpr PieceColor operator+(PieceColor color, int n)
+// Team membership without going through getTeam(): a colour bit ANDed with a
+// team mask is non-zero exactly when that colour is on that team. Callers must
+// already know the square is occupied, since NONE_COLOR reads as "not mine".
+constexpr inline bool isOnTeam(PieceColor col, PieceColor team)
 {
-    int index = 0;
-
-    int value = static_cast<int>(color);
-    while (value >>= 1) ++index;
-
-    index = (index + n) % 4;
-
-    return static_cast<PieceColor>(1 << index);
+    return (static_cast<int>(col) & static_cast<int>(team)) != 0;
 }
+
+// Contiguous copies of the two offset sets the attack scan walks, so the hot
+// loops index a small dedicated array rather than a row of offsets[11][16].
+// Last on-board square along each of the eight king-directions from a square,
+// or the square itself when the ray is empty. Ray walks use this as the loop
+// bound so they no longer pay a validity lookup per step. 3.6 KB, L1-resident --
+// deliberately far smaller than a per-square-pair bitboard table.
+inline constexpr auto rayEndTable = [] {
+    std::array<std::array<int16_t, 8>, 224> t{};
+    constexpr int dirs[8] = { -17, -16, -15, 1, 17, 16, 15, -1 };
+    for (int sq = 0; sq < 224; ++sq)
+        for (int d = 0; d < 8; ++d)
+        {
+            int last = sq;
+            for (int n = sq + dirs[d]; !isInvalidLocation(n); n += dirs[d]) last = n;
+            t[sq][d] = static_cast<int16_t>(last);
+        }
+    return t;
+}();
+
+inline constexpr int knightOffsets[8] = { -18, -33, -31, -14, 18, 33, 31, 14 };
+inline constexpr int kingOffsets[8]   = { -17, -16, -15,  1, 17, 16, 15, -1 };
+
+static_assert(getTeam(RED) == TEAM_RY && getTeam(YELLOW) == TEAM_RY);
+static_assert(getTeam(BLUE) == TEAM_BG && getTeam(GREEN) == TEAM_BG);
+static_assert(getTeam(NONE_COLOR) == NONE_COLOR);
+static_assert(RED + 1 == BLUE && BLUE + 1 == YELLOW && YELLOW + 1 == GREEN && GREEN + 1 == RED);
+static_assert(RED + 0 == RED && RED + 2 == YELLOW && RED + 4 == RED);
 
 
 enum CastlingRights
