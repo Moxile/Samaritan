@@ -1,9 +1,25 @@
 #pragma once
 
+#include <bit>
 #include <string>
 #include <sstream>
 #include <cstdint>
 #include <array>
+
+// Count trailing zeros. Colours and castling rights are bit masks, so almost
+// every "which player is this" question is a ctz. std::countr_zero compiles to
+// the same tzcnt/rbit instruction as the GCC builtin it replaces, but it also
+// exists on MSVC and is defined for zero (returns 32) instead of undefined.
+constexpr inline int ctz(unsigned int x) { return std::countr_zero(x); }
+
+// Non-inlining is only ever a test/benchmark concern here (keeping a helper out
+// of its caller so the stack it dirties survives), but the spelling differs per
+// compiler.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define SAM_NOINLINE __declspec(noinline)
+#else
+#define SAM_NOINLINE __attribute__((noinline))
+#endif
 
 enum PieceType
 {
@@ -45,6 +61,27 @@ constexpr int baseMailbox[224] = {
     -1, -1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0, -1, -1, -1, -1,
     -1, -1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0, -1, -1, -1, -1,
 };
+
+// Compact index for each playable square, 0..159, with the off-board corners
+// marked -1. Used by the Zobrist keys; it lives here rather than in an
+// evaluation header so that hashing a position does not depend on the evaluator.
+constexpr int board_table[] =
+    {
+        -1, -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, -1, -1,
+        -1, -1, -1, -1, 8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1,
+        -1, -1, -1, -1, 16, 17, 18, 19, 20, 21, 22, 23, -1, -1, -1, -1,
+        -1, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, -1,
+        -1, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1,
+        -1, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, -1,
+        -1, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, -1,
+        -1, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, -1,
+        -1, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, -1,
+        -1, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, -1,
+        -1, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, -1,
+        -1, -1, -1, -1, 136, 137, 138, 139, 140, 141, 142, 143, -1, -1, -1, -1,
+        -1, -1, -1, -1, 144, 145, 146, 147, 148, 149, 150, 151, -1, -1, -1, -1,
+        -1, -1, -1, -1, 152, 153, 154, 155, 156, 157, 158, 159, -1, -1, -1, -1};
+
 
 // offsets for all pieces
 constexpr int offsetsNum[11] = { 0, 3, 3, 3, 3, 8, 4, 4, 8, 8, 16, };
@@ -209,7 +246,6 @@ constexpr char files[14] = {'a',  'b',  'c',  'd',  'e',  'f', 'g', 'h', 'i', 'j
 
 class Move
 {
-    // Stockfish note
     // A move needs 32 bits to be stored
     //
     // bit  0- 8: destination square (from 0 to 63)
@@ -227,9 +263,11 @@ public:
         SPECIAL = 24
     };
 
-    explicit Move() = default;
+    // Not explicit: SearchInfo value-initialises arrays of Move with `= {}`,
+    // which copy-initialisation forbids for an explicit default constructor.
+    Move() = default;
 
-    Move(int destination, int origin, int promotion_type, int special_move)
+    constexpr Move(int destination, int origin, int promotion_type, int special_move)
     {
         data = destination;
         data |= origin << 8;
@@ -276,6 +314,18 @@ struct ExtMove : public Move
     // with an ambiguity that yields to a compile error.
     operator float() const = delete;
 };
+
+// An explicit "no move". Square 0 is off the board, so no generated move can
+// ever have both from and to equal to zero -- data == 0 is unambiguous.
+//
+// Note ExtMove is deliberately left trivially default-constructible: giving its
+// fields in-class initialisers makes `ExtMove moveList[MAX_MOVES]` zero 6 KB on
+// every construction, measured at +37% on movegen. Correctness is instead
+// guaranteed by every emission path writing both fields, which the
+// dirty-stack test in bench/ enforces.
+inline constexpr Move MOVE_NONE = Move(0, 0, 0, 0);
+
+constexpr inline bool isNone(const Move &m) { return m.getRawData() == 0; }
 
 inline bool operator<(const ExtMove &f, const ExtMove &s) { return f.value < s.value; }
 inline bool operator>(const ExtMove &f, const ExtMove &s) { return f.value > s.value; }

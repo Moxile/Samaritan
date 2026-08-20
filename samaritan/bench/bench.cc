@@ -4,6 +4,8 @@
 #include "movegen.h"
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
+#include <string>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -27,7 +29,11 @@ int main(int argc, char** argv) {
         loadFEN(pos, fen);
 
         // warm up, then take the best of 5 runs to suppress scheduler noise
-        for (int i = 0; i < 20000; i++) { MoveList m(pos); asm volatile("" :: "r"(m.size())); }
+        // volatile sink instead of an inline-asm barrier: same effect (the
+        // optimiser cannot drop the loop), but it also compiles on MSVC.
+        volatile size_t sink = 0;
+        for (int i = 0; i < 20000; i++) { MoveList m(pos); sink = m.size(); }
+        (void)sink;
         double best = 1e18; size_t n = 0;
         for (int rep = 0; rep < 5; rep++) {
             const int N = 200000;

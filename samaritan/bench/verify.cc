@@ -1,8 +1,15 @@
 // Correctness gate: perft every corpus position at depths 1..N and compare
-// against reference counts produced by stockfish_4pc. Run after every change.
+// against the recorded reference counts in bench/ref_depth*.tsv. Run after
+// every change.
+//
+// The references were produced once by an independent 4-player engine; see
+// workflow/benchmarking.md for how to regenerate them. Nothing here depends on
+// that engine being installed.
 #include "utility.h"
 #include "movegen.h"
 #include <cstdio>
+#include <cstdlib>
+#include <string>
 #include <fstream>
 #include <sstream>
 #include <vector>

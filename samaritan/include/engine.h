@@ -19,6 +19,10 @@ namespace samaritan
             // Configuration
             bool debug = false;
 
+            // Path of the loaded SNN1 network, empty when evaluation is
+            // material or random.
+            std::string evalFile;
+
             // Position options
             std::string position_mode;
 
@@ -40,6 +44,10 @@ namespace samaritan
             void handleGo();
             void handleStop();
             void handleQuit();
+
+            // Evaluation
+            void loadNetwork(const std::string& path);
+            static Move parseMove(Position& position, const std::string& token);
 
             // Other commands
             void handlePerft();

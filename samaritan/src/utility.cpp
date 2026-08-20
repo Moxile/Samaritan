@@ -1,5 +1,28 @@
 #include "utility.h"
 
+#ifdef _WIN32
+#include <windows.h>
+
+// The board is drawn with ANSI colour escapes. A Windows console understands
+// them only once virtual-terminal processing is switched on, which is a runtime
+// call rather than a compile-time one -- without it the escapes are printed
+// literally and the board becomes unreadable.
+static void enableAnsiColors()
+{
+    static bool done = false;
+    if (done) return;
+    done = true;
+
+    const HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (out == INVALID_HANDLE_VALUE) return;
+    DWORD mode = 0;
+    if (!GetConsoleMode(out, &mode)) return;   // redirected to a file: nothing to set
+    SetConsoleMode(out, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+}
+#else
+static void enableAnsiColors() {}
+#endif
+
 const void loadFEN(Position &pos, const std::string fen)
 {
     pos.gameStates.clear();
@@ -14,52 +37,50 @@ const void loadFEN(Position &pos, const std::string fen)
 
     GameState initialState;
     initialState.zobristKey = 0;
-    auto parts = fen | std::views::split('-') | std::views::transform([](auto v)
-                                                                      {
-                    auto c = v | std::views::common;
-                    return std::string(c.begin(), c.end()); });
+    // Fields are '-' separated:
+    //   0 turn | 1 dead | 2 castle O-O | 3 castle O-O-O | 4 points | 5 halfmove
+    //   6 en passant (optional) | board
+    // The en-passant field is only present when some player actually has one,
+    // so the board is the last field either way. This mirrors the reference
+    // engine's parser exactly, so the two stay round-trip compatible.
+    std::vector<std::string> parts;
+    for (auto part : fen | std::views::split('-') | std::views::transform([](auto v)
+                     { auto c = v | std::views::common;
+                       return std::string(c.begin(), c.end()); }))
+        parts.push_back(part);
 
-                    
-    int part_counter = 1;
-    for (auto part : parts)
+    if (parts.size() > 0) fen_setPlayerToMove(initialState, parts[0]);
+    if (parts.size() > 2) fen_setCastlingRights(initialState, parts[2], RED_OO);
+    if (parts.size() > 3) fen_setCastlingRights(initialState, parts[3], RED_OOO);
+    if (parts.size() > 5) fen_setHalfmoveClock(initialState, parts[5]);
+
+    std::string epStr, boardStr;
+    if (parts.size() >= 8)
     {
-        switch (part_counter)
-        {
-        case 1:
-            // The turn is folded into the key once, after the board is parsed.
-            fen_setPlayerToMove(initialState, part);
-            break;
-        case 2:
-            break;
-        case 3:
-            fen_setCastlingRights(initialState, part, RED_OO);
-            break;
-        case 4:
-            fen_setCastlingRights(initialState, part, RED_OOO);
-            break;
-        case 5:
-            break;
-        case 6:
-            break;
-        case 7:
-            fen_setBoard(pos.board, part);
-            break;
-        default:
-            break;
-        }
-        part_counter++;
+        epStr    = parts[6];
+        boardStr = parts[7];
     }
+    else if (parts.size() == 7)
+    {
+        if (parts[6].find('/') != std::string::npos) boardStr = parts[6];
+        else                                         epStr    = parts[6];
+    }
+
+    if (!epStr.empty() && epStr.find("enPassant") != std::string::npos)
+        fen_setEnPassant(initialState, epStr);
+
+    if (!boardStr.empty()) fen_setBoard(pos.board, boardStr);
 
     // Set Zobrist Key
     for (int sq = 0; sq < 224; sq++) {
         if (pos.board.pieceMailbox[sq] == NONE_PIECE) continue;
         int idx = board_table[sq];
         int piece = pos.board.pieceMailbox[sq] - 1;
-        int color = __builtin_ctz((unsigned int)pos.board.colorMailbox[sq]);
+        int color = ctz((unsigned int)pos.board.colorMailbox[sq]);
         initialState.zobristKey ^= zobristPieces[idx][piece][color];
     }
 
-    initialState.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)initialState.curTurn)];
+    initialState.zobristKey ^= zobristTurn[ctz((unsigned int)initialState.curTurn)];
 
     int rights = initialState.castleRights;
     for (int i = 0; i < 8; i++)
@@ -74,11 +95,57 @@ const void loadFEN(Position &pos, const std::string fen)
 
     pos.board.rebuildPieceList();
 
-    // init accumulator
-    pos.refreshNNUE();
-    pos.nnue.init_eval(initialState.curTurn);
-
     pos.gameStates.push_back(initialState);
+    pos.refreshEval();
+}
+
+// "a3" or "a3:a4" (target before the colon), optionally single-quoted.
+// Returns a mailbox location, or -1 when the token is empty or malformed.
+static int parseEnPassantSquare(std::string s)
+{
+    if (!s.empty() && s.front() == '\'') s.erase(s.begin());
+    if (!s.empty() && s.back()  == '\'') s.pop_back();
+    if (s.empty()) return -1;
+
+    const auto colon = s.find(':');
+    if (colon != std::string::npos) s = s.substr(0, colon);
+    if (s.size() < 2) return -1;
+
+    const int file = s[0] - 'a';                       // 'a' -> column 1
+    int rank = 0;
+    try { rank = std::stoi(s.substr(1)); } catch (...) { return -1; }
+    if (file < 0 || file > 13 || rank < 1 || rank > 14) return -1;
+
+    const int row = 14 - rank;                         // row 0 is rank 14
+    return row * 16 + (file + 1);
+}
+
+// Plies since the last capture or pawn move. This is not decoration: it drives
+// the 200-ply progress draw, so a position reloaded from FEN with the field
+// dropped restarts the clock and postpones a draw that was nearly due.
+//
+// pliesFromNull is deliberately *not* serialised. It is search-only state
+// describing an artificial null move inside a tree, and a null move never
+// belongs to a real game the FEN describes.
+const void fen_setHalfmoveClock(GameState &state, const std::string field)
+{
+    try { state.halfmoveClock = std::stoi(field); }
+    catch (...) { state.halfmoveClock = 0; return; }
+    if (state.halfmoveClock < 0) state.halfmoveClock = 0;
+}
+
+// Field shape: {'enPassant':('a3','','','')} -- one slot per colour, R B Y G.
+const void fen_setEnPassant(GameState &state, const std::string field)
+{
+    const auto open  = field.find('(');
+    const auto close = field.find(')');
+    if (open == std::string::npos || close == std::string::npos || close < open) return;
+
+    const std::string content = field.substr(open + 1, close - open - 1);
+    std::stringstream ss(content);
+    std::string token;
+    for (int c = 0; c < 4 && std::getline(ss, token, ','); ++c)
+        state.enpassants[c] = parseEnPassantSquare(token);
 }
 
 const void fen_setPlayerToMove(GameState &state, const std::string color)
@@ -169,10 +236,10 @@ const void fen_setBoard(Board &board, const std::string boardFEN)
                     break;
                 }
 
-                // Guarded: __builtin_ctz(0) is undefined, and a malformed FEN
-                // can leave the square colourless.
+                // Guarded: a malformed FEN can leave the square colourless,
+                // and ctz(0) is 32, which indexes nothing valid.
                 const auto colorIdx = squareColor != NONE_COLOR
-                                    ? __builtin_ctz((unsigned int)squareColor)
+                                    ? ctz((unsigned int)squareColor)
                                     : 0;
 
                 switch (piece.at(1))
@@ -324,11 +391,33 @@ std::string positionToFEN(const Position &pos)
         flushEmpty();
     }
 
-    return std::string(1, turnChar) + "-0,0,0,0-" + oo + "-" + ooo + "-0,0,0,0-0-" + board;
+    // En passant is only written when someone actually has one, matching the
+    // reference engine: with no such player the field is omitted entirely.
+    std::string ep;
+    bool anyEp = false;
+    for (int c = 0; c < 4; c++) if (state.enpassants[c] != -1) anyEp = true;
+    if (anyEp)
+    {
+        ep = "{'enPassant':(";
+        for (int c = 0; c < 4; c++)
+        {
+            const int sq = state.enpassants[c];
+            if (sq != -1)
+                ep += std::string("'") + files[(sq % 16) - 1] + std::to_string(ranks[sq / 16]) + "'";
+            else
+                ep += "''";
+            if (c != 3) ep += ",";
+        }
+        ep += ")}-";
+    }
+
+    return std::string(1, turnChar) + "-0,0,0,0-" + oo + "-" + ooo + "-0,0,0,0-"
+         + std::to_string(state.halfmoveClock) + "-" + ep + board;
 }
 
 void print(Position &pos)
 {
+    enableAnsiColors();
     printf("     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n");
     for (int rank = 14; rank >= 1; rank--)
     {

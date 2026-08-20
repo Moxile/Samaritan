@@ -43,7 +43,7 @@ struct TTEntry
 {
     uint64_t key  = 0;
     int      score = 0;
-    Move     bestMove;
+    Move     bestMove = MOVE_NONE;
     int8_t   depth = -1;
     TTFlag   flag  = TT_EXACT;
 };

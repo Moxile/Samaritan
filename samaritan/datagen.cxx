@@ -1,5 +1,6 @@
 #include <CLI/CLI.hpp>
 #include <fstream>
+#include <cstdio>
 #include <iostream>
 #include <random>
 #include <string>
@@ -47,6 +48,18 @@ static GameResult playGame(int depth, int randomPlies, int maxMoves,
     while (true)
     {
         PieceColor curTurn = pos.gameStates.back().curTurn;
+
+        // Termination: a king was captured. The team that lost its king loses,
+        // and curTurn is that team -- movegen would also return no moves here,
+        // but the "was it check?" test below cannot tell this apart from a
+        // stalemate, and would have scored a lost game as a draw.
+        if (pos.gameStates.back().lastCapturedPiece == KING)
+            return (getTeam(pos.gameStates.back().lastCapturedPieceColor) == TEAM_RY)
+                 ? GameResult::WIN_BG : GameResult::WIN_RY;
+
+        // Termination: a draw by repetition or by the progress rule
+        if (isDraw(pos)) return GameResult::DRAW;
+
         MoveList   moves(pos);
 
         // Termination: no legal moves
@@ -79,7 +92,6 @@ static GameResult playGame(int depth, int randomPlies, int maxMoves,
         }
         else
         {
-            pos.nnue.init_eval(curTurn);
             SearchInfo info = iterativeDeepening(pos, tt, depth, /*silent=*/true);
             if (info.pv_length[0] == 0)
             {

@@ -1,16 +1,20 @@
 #include "utility.h"
 #include "movegen.h"
 #include <cstdio>
+#include <cstdlib>
+#include <string>
 #include <fstream>
 #include <sstream>
 static long nodes=0, fails=0;
 static void walk(int d, Position&p){
   nodes++;
-  if(!p.board.pieceListConsistent()){ if(fails<5) printf("  INCONSISTENT: %s\n", positionToFEN(p).c_str()); fails++; }
+  std::string why;
+  if(!p.isConsistent(&why)){ if(fails<5) printf("  INCONSISTENT (%s): %s\n", why.c_str(), positionToFEN(p).c_str()); fails++; }
   if(d==0) return;
   MoveList m(p);
   for(Move x:m){ p.move(x); walk(d-1,p); p.undoMove(x);
-                 if(!p.board.pieceListConsistent()){ if(fails<5) printf("  BAD AFTER UNDO of %s\n", x.toUCI().c_str()); fails++; } }
+                 std::string w2;
+                 if(!p.isConsistent(&w2)){ if(fails<5) printf("  BAD AFTER UNDO of %s (%s)\n", x.toUCI().c_str(), w2.c_str()); fails++; } }
 }
 int main(int argc,char**argv){
   initZobrist(); Position pos(false);

@@ -33,7 +33,7 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
     const auto myColor = pos.board.colorMailbox[loc];
     const auto myTeam = getTeam(myColor);
 
-    const PawnCfg &cfg = pawnCfg[__builtin_ctz((unsigned int)myColor) + 1];
+    const PawnCfg &cfg = pawnCfg[ctz((unsigned int)myColor) + 1];
     const int offset = cfg.o;
     const int rank = cfg.useRow ? (loc / 16) : (loc % 16);
     const bool isOnStartRank  = (rank == cfg.startVal);
@@ -82,12 +82,14 @@ constexpr ExtMove *getPawnMoves(const Position &pos, const int loc, ExtMove *mov
         {
             *moveList = Move(loc + offsets[offset][0], loc, 0, 0);
             moveList->gen_type = QUIETS;
+            moveList->value = 0;
             moveList++;
 
             if (isOnStartRank && pos.board.isEmpty(loc + 2 * offsets[offset][0]))
             {
                 *moveList = Move(loc + 2 * offsets[offset][0], loc, 0, 0);
                 moveList->gen_type = QUIETS;
+                moveList->value = 0;
                 moveList++;
             }
         }
@@ -238,6 +240,7 @@ constexpr ExtMove *getKnightMoves(const Position &pos, const int loc, ExtMove *m
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = QUIETS;
+                moveList->value = 0;
                 moveList++;
             }
             else if (!isOnTeam(pos.board.colorMailbox[move], myTeam))
@@ -276,6 +279,7 @@ constexpr ExtMove *getStraightLineMoves(const Position &pos, const int loc, ExtM
         {
             *moveList = Move(destination, loc, 0, 0);
             moveList->gen_type = QUIETS;
+            moveList->value = 0;
             moveList++;
         }
     }
@@ -325,6 +329,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
             {
                 *moveList = Move(move, loc, 0, 0);
                 moveList->gen_type = QUIETS;
+                moveList->value = 0;
                 moveList++;
             }
             else if (!isOnTeam(pos.board.colorMailbox[move], myTeam))
@@ -353,6 +358,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(K14, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -365,6 +371,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(G14, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -379,6 +386,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(B6, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -391,6 +399,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(B10, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -405,6 +414,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(F1, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -417,6 +427,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(J1, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -431,6 +442,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(O5, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -443,6 +455,7 @@ ExtMove *getKingMoves(const Position &pos, const int loc, ExtMove *moveList)
                 {
                     *moveList = Move(O9, loc, 0, 4);
                     moveList->gen_type = CASTLING;
+                    moveList->value = 0;
                     moveList++;
                 }
             }
@@ -482,7 +495,7 @@ void computeCheckInfo(const Position &pos, PieceColor us, CheckInfo &info)
     info = CheckInfo();
     info.valid = true;
 
-    const int ksq = pos.board.kingTracker[__builtin_ctz((unsigned int)us)];
+    const int ksq = pos.board.kingTracker[ctz((unsigned int)us)];
     if (ksq < 0) return;                       // king already captured
 
     const PieceColor myTeam = getTeam(us);
@@ -556,8 +569,13 @@ void computeCheckInfo(const Position &pos, PieceColor us, CheckInfo &info)
 
 bool inCheck(const Position &pos, PieceColor color)
 {
+    const int ksq = pos.board.kingTracker[ctz(color)];
+    // No king to be in check: that colour has already been captured out of the
+    // game. Guarded rather than assumed, because the attack scan indexes tables
+    // by square and -1 would walk off the front of them.
+    if (ksq < 0) return false;
     // Return true if the king is in check.
-    return pos.board.isSquareAttacked(pos.board.kingTracker[__builtin_ctz(color)], color, getTeam(color));
+    return pos.board.isSquareAttacked(ksq, color, getTeam(color));
 }
 
 // Is `to` reachable from `ksq` along `dir` without passing a blocker?
@@ -589,6 +607,11 @@ static inline bool isLegalMove(Position &pos, const ExtMove &m, const CheckInfo 
     const int from = m.from();
     const int to   = m.to();
     const int special = m.special_move();
+
+    // Capturing an enemy king wins the game for our team instantly, so it is
+    // legal no matter what: while in check, in double check, and from a pinned
+    // piece. This must be tested before any of those.
+    if (pos.board.pieceMailbox[to] == KING) return true;
 
     if (special == 2 || special == 3)            // en passant (and ep-promotion)
     {
@@ -626,14 +649,20 @@ static inline bool isLegalMove(Position &pos, const ExtMove &m, const CheckInfo 
 ExtMove *generate(Position &pos, ExtMove *moveList)
 {
     const auto curTurn = pos.gameStates.back().curTurn;
+
+    // A captured king ends the game immediately for both teams, so any position
+    // missing a king is terminal and has no legal moves at all.
+    for (int c = 0; c < 4; ++c)
+        if (pos.board.kingTracker[c] < 0) return moveList;
+
     CheckInfo &info = pos.gameStates.back().checkInfo;
     computeCheckInfo(pos, curTurn, info);
 
-    const int ksq = pos.board.kingTracker[__builtin_ctz((unsigned int)curTurn)];
+    const int ksq = pos.board.kingTracker[ctz((unsigned int)curTurn)];
 
     // Generate straight into the caller's buffer; no second staging array.
     ExtMove *end = moveList;
-    const int me = __builtin_ctz((unsigned int)curTurn);
+    const int me = ctz((unsigned int)curTurn);
     const int *myPieces = pos.board.pieceList[me];
     const int myCount = pos.board.pieceCount[me];
     for (int i = 0; i < myCount; ++i)

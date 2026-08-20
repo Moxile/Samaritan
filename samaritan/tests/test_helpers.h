@@ -51,15 +51,15 @@ inline void setupPosition(Position& pos, PieceColor turn,
         pos.board.pieceMailbox[p.square] = p.type;
         pos.board.colorMailbox[p.square] = p.color;
         if (p.type == KING)
-            pos.board.kingTracker[__builtin_ctz((unsigned int)p.color)] = p.square;
+            pos.board.kingTracker[ctz((unsigned int)p.color)] = p.square;
         if (p.type != PAWN)
-            pos.board.nonPawnPieceCount[__builtin_ctz((unsigned int)p.color)]++;
+            pos.board.nonPawnPieceCount[ctz((unsigned int)p.color)]++;
         state.zobristKey ^= zobristPieces[board_table[p.square]]
                                          [p.type - 1]
-                                         [__builtin_ctz((unsigned int)p.color)];
+                                         [ctz((unsigned int)p.color)];
     }
 
-    state.zobristKey ^= zobristTurn[__builtin_ctz((unsigned int)turn)];
+    state.zobristKey ^= zobristTurn[ctz((unsigned int)turn)];
     for (int i = 0; i < 8; i++)
         if (castleRights & (1 << i))
             state.zobristKey ^= zobristCastle[i];
@@ -69,10 +69,6 @@ inline void setupPosition(Position& pos, PieceColor turn,
     pos.gameStates.clear();
     pos.gameStates.push_back(state);
 
-    if (pos.useEval) {
-        pos.refreshNNUE();
-        pos.nnue.init_eval(turn);
-    }
 }
 
 // Snapshot of the board arrays so we can compare before/after make+unmake.

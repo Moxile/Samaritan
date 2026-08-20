@@ -10,6 +10,49 @@ protected:
     static void SetUpTestSuite() { initZobrist(); }
 };
 
+// ═══════════════════════════════════════════════════════════════
+//  Hand-crafted evaluation: material + slider mobility
+// ═══════════════════════════════════════════════════════════════
+
+TEST_F(SearchTest, OpenSliderMobilityIsRewardedByPieceWeight) {
+    auto mobilityOf = [](PieceType piece) {
+        Position pos(false);
+        setupPosition(pos, RED, {
+            {119, piece, RED},
+            {216, KING, RED}, {7, KING, YELLOW},
+            {113, KING, BLUE}, {110, KING, GREEN},
+        });
+        return evaluateMobility(pos);
+    };
+
+    const int bishop = mobilityOf(BISHOP);
+    const int rook   = mobilityOf(ROOK);
+    const int queen  = mobilityOf(QUEEN);
+    EXPECT_GT(bishop, 0);
+    EXPECT_GT(rook, bishop);
+    EXPECT_GT(queen, rook);
+}
+
+TEST_F(SearchTest, FriendlyPiecesBlockSliderMobility) {
+    Position open(false), blocked(false);
+    const std::vector<Piece> kings = {
+        {216, KING, RED}, {7, KING, YELLOW},
+        {113, KING, BLUE}, {110, KING, GREEN},
+    };
+
+    auto openPieces = kings;
+    openPieces.push_back({119, QUEEN, RED});
+    setupPosition(open, RED, openPieces);
+
+    auto blockedPieces = openPieces;
+    for (int sq : {102, 103, 104, 118, 120, 134, 135, 136})
+        blockedPieces.push_back({sq, PAWN, RED});
+    setupPosition(blocked, RED, blockedPieces);
+
+    EXPECT_GT(evaluateMobility(open), evaluateMobility(blocked));
+    EXPECT_EQ(sliderMobility(blocked.board, 119, QUEEN, TEAM_RY), 0);
+}
+
 // Starting-position pieces for use with setupPosition.
 // Avoids loadFEN which calls refreshNNUE unconditionally and
 // triggers the KING-feature OOB bug.
@@ -224,4 +267,220 @@ TEST_F(SearchTest, NullMoveSwitchesTurn) {
     EXPECT_NE(before, after) << "Null move must change the side to move";
     pos.undoNullMove();
     EXPECT_EQ(pos.gameStates.back().curTurn, before);
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  Draw rules  (4PC: threefold repetition, 50 whole moves without progress)
+// ═══════════════════════════════════════════════════════════════
+
+// Each player moves a knight out, then each moves it back: eight plies that
+// return to exactly the starting position.
+static bool shuffleRound(Position& p) {
+    std::vector<Move> out;
+    for (int i = 0; i < 4; i++) {
+        Move chosen; bool got = false;
+        for (const auto& m : MoveList(p))
+            if (p.board.pieceMailbox[m.from()] == KNIGHT && p.board.isEmpty(m.to())) {
+                chosen = m; got = true; break;
+            }
+        if (!got) return false;
+        p.move(chosen); out.push_back(chosen);
+    }
+    for (int i = 0; i < 4; i++) {
+        Move back(out[i].from(), out[i].to(), 0, 0);
+        if (!MoveList(p).contains(back)) return false;
+        p.move(back);
+    }
+    return true;
+}
+
+TEST_F(SearchTest, ShuffleRoundReturnsToTheSamePosition) {
+    Position pos(false);
+    loadFEN(pos, START_FEN);
+    const uint64_t key = pos.gameStates.back().zobristKey;
+    ASSERT_TRUE(shuffleRound(pos));
+    EXPECT_EQ(pos.gameStates.back().zobristKey, key)
+        << "eight plies of knight shuffling should restore the position exactly";
+    EXPECT_EQ(pos.gameStates.back().halfmoveClock, 8);
+}
+
+TEST_F(SearchTest, ThreefoldRepetitionIsADrawButTwofoldIsNot) {
+    Position pos(false);
+    loadFEN(pos, START_FEN);
+    EXPECT_FALSE(isDraw(pos)) << "first occurrence";
+    ASSERT_TRUE(shuffleRound(pos));
+    EXPECT_FALSE(isDraw(pos)) << "second occurrence must not be a draw";
+    ASSERT_TRUE(shuffleRound(pos));
+    EXPECT_TRUE(isDraw(pos)) << "third occurrence is a threefold draw";
+}
+
+TEST_F(SearchTest, HalfmoveClockResetsOnPawnMoveAndCapture) {
+    Position pos(false);
+    loadFEN(pos, START_FEN);
+    ASSERT_TRUE(shuffleRound(pos));
+    ASSERT_EQ(pos.gameStates.back().halfmoveClock, 8);
+    // a pawn push is irreversible
+    Move pawn(165, 197, 0, 0);
+    ASSERT_TRUE(MoveList(pos).contains(pawn));
+    pos.move(pawn);
+    EXPECT_EQ(pos.gameStates.back().halfmoveClock, 0);
+}
+
+TEST_F(SearchTest, FiftyMoveRuleIsADraw) {
+    Position pos(false);
+    loadFEN(pos, START_FEN);
+    int rounds = 0;
+    while (pos.gameStates.back().halfmoveClock < HALFMOVE_LIMIT && rounds < 64) {
+        ASSERT_TRUE(shuffleRound(pos));
+        rounds++;
+    }
+    EXPECT_EQ(pos.gameStates.back().halfmoveClock, HALFMOVE_LIMIT);
+    EXPECT_EQ(HALFMOVE_LIMIT, 200) << "50 whole moves x 4 players";
+    EXPECT_TRUE(isDraw(pos));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Mate scores survive the transposition table
+// ═══════════════════════════════════════════════════════════════
+
+TEST_F(SearchTest, KingCaptureScoresAsMateAtDistanceOne) {
+    Position pos(false);
+    setupPosition(pos, RED, {
+        {216, KING, RED}, {200, ROOK, BLUE}, {113, KING, BLUE},
+        {7, KING, YELLOW}, {110, KING, GREEN}, {109, QUEEN, RED},
+    });
+    TranspositionTable warm; warm.resize(4);
+    for (int d = 1; d <= 5; d++) {
+        SearchInfo fi, wi;
+        TranspositionTable fresh; fresh.resize(4);
+        EXPECT_EQ(negaMax(pos, d, 0, fi, fresh), VALUE_MATE - 1)
+            << "depth " << d << " with a fresh table";
+        EXPECT_EQ(negaMax(pos, d, 0, wi, warm), VALUE_MATE - 1)
+            << "depth " << d << " with a warm table";
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  Quiescence: terminal states and check
+// ═══════════════════════════════════════════════════════════════
+
+// A king capture available at the horizon is mate, not a pile of material.
+// Quiescence used to score it as the static evaluation of the position it
+// reached: movegen (correctly) offers no moves once a king is gone, so nothing
+// there ever noticed the game had ended.
+TEST_F(SearchTest, QuiescenceScoresAKingCaptureAsMate) {
+    Position pos(false);
+    setupPosition(pos, RED, {
+        {114, QUEEN, RED},    // one square from the blue king
+        {113, KING, BLUE},
+        {216, KING, RED},
+        {7,   KING, YELLOW},
+        {110, KING, GREEN},
+    });
+
+    TranspositionTable tt; tt.resize(1);
+    SearchInfo info;
+    const int q = qSearch(pos, 0, info, tt, -VALUE_INFINITE, VALUE_INFINITE);
+
+    EXPECT_EQ(q, VALUE_MATE - 1) << "capturing a king is mate at distance one";
+    EXPECT_GE(q, VALUE_MATE_IN_MAX_PLY) << "must read as a mate score, not a material score";
+
+    // Entering through alpha-beta at depth 0 goes straight to quiescence, and
+    // has to agree.
+    SearchInfo info2;
+    TranspositionTable tt2; tt2.resize(1);
+    EXPECT_EQ(negaMax(pos, 0, 0, info2, tt2), VALUE_MATE - 1);
+}
+
+// A checked side cannot stand pat: it has to answer the check, and its only
+// answer may be a quiet move. Quiescence therefore searches every legal move
+// when in check, not only captures.
+TEST_F(SearchTest, QuiescenceSearchesEvasionsWhenInCheck) {
+    Position pos(false);
+    setupPosition(pos, RED, {
+        {216, KING, RED},
+        {212, ROOK, BLUE},    // same rank as the red king, nothing in between
+        {113, KING, BLUE},
+        {7,   KING, YELLOW},
+        {110, KING, GREEN},
+    });
+    ASSERT_TRUE(inCheck(pos, RED));
+
+    // No red or yellow piece can capture the rook, so a captures-only
+    // quiescence has nothing at all to search.
+    int captures = 0;
+    for (const auto& m : MoveList(pos))
+        if (m.gen_type == CAPTURES) captures++;
+    ASSERT_EQ(captures, 0);
+
+    TranspositionTable tt; tt.resize(1);
+    SearchInfo info;
+    qSearch(pos, 0, info, tt, -VALUE_INFINITE, VALUE_INFINITE);
+
+    EXPECT_GT(info.nodes, 1) << "the evasions must actually be searched";
+}
+
+// With no king on the board for the side to move, the position is over. It must
+// not reach the attack scan, which indexes tables by the king's square.
+TEST_F(SearchTest, SearchHandlesAMissingKing) {
+    Position pos(false);
+    setupPosition(pos, RED, {
+        {216, KING, RED}, {113, KING, BLUE}, {7, KING, YELLOW},   // green has none
+        {114, QUEEN, RED},
+    });
+    EXPECT_FALSE(inCheck(pos, GREEN));
+
+    TranspositionTable tt; tt.resize(1);
+    SearchInfo info;
+    EXPECT_NO_THROW(negaMax(pos, 2, 0, info, tt));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  The draw clock survives FEN
+// ═══════════════════════════════════════════════════════════════
+
+// START_FEN with a different halfmove field. The fields are '-' separated and
+// the clock is the sixth.
+static std::string fenWithClock(int clock) {
+    const std::string marker = "-0,0,0,0-0-";
+    const size_t at = START_FEN.rfind(marker);
+    return START_FEN.substr(0, at) + "-0,0,0,0-" + std::to_string(clock) + "-"
+         + START_FEN.substr(at + marker.size());
+}
+
+TEST_F(SearchTest, FENCarriesTheDrawClock) {
+    for (int clock : {0, 199, 200}) {
+        Position pos(false);
+        loadFEN(pos, fenWithClock(clock));
+        EXPECT_EQ(pos.gameStates.back().halfmoveClock, clock)
+            << "clock " << clock << " was dropped on load";
+        EXPECT_EQ(isDraw(pos), clock >= HALFMOVE_LIMIT)
+            << "clock " << clock << " decides the progress draw";
+    }
+}
+
+TEST_F(SearchTest, FENRoundTripsTheDrawClock) {
+    Position pos(false);
+    loadFEN(pos, fenWithClock(199));
+    ASSERT_FALSE(isDraw(pos));
+
+    // One quiet move takes it to the limit; serialising and reloading must not
+    // hand back a position with 200 plies of progress it never made.
+    Position reloaded(false);
+    loadFEN(reloaded, positionToFEN(pos));
+    EXPECT_EQ(reloaded.gameStates.back().halfmoveClock, 199);
+    EXPECT_FALSE(isDraw(reloaded));
+
+    Move knight(180, 213, 0, 0);   // a quiet knight move, no capture, no pawn
+    ASSERT_TRUE(MoveList(pos).contains(knight));
+    pos.move(knight);
+    EXPECT_EQ(pos.gameStates.back().halfmoveClock, 200);
+    EXPECT_TRUE(isDraw(pos));
+
+    Position atLimit(false);
+    loadFEN(atLimit, positionToFEN(pos));
+    EXPECT_EQ(atLimit.gameStates.back().halfmoveClock, 200);
+    EXPECT_TRUE(isDraw(atLimit)) << "a drawn position must still be drawn after a round trip";
 }

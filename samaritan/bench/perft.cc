@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <string>
 
 static const std::string START_FEN =

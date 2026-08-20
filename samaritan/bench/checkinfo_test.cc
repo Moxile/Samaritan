@@ -12,7 +12,7 @@ static void validate(Position &pos)
 {
     const PieceColor us = pos.gameStates.back().curTurn;
     Board &b = pos.board;
-    const int ksq = b.kingTracker[__builtin_ctz((unsigned int)us)];
+    const int ksq = b.kingTracker[ctz((unsigned int)us)];
     if (ksq < 0) return;
 
     CheckInfo info;

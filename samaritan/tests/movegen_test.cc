@@ -498,3 +498,72 @@ TEST_F(MoveGenTest, PerftUnchangedAfterMakeUnmake) {
 
     EXPECT_EQ(fullsearch(2, pos), p);
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  Move-field initialisation (MG-3)
+// ═══════════════════════════════════════════════════════════════
+
+// ExtMove is deliberately trivially default-constructible — giving it in-class
+// initialisers costs ~37% on movegen, because MoveList holds a 512-entry array.
+// Correctness therefore depends on every emission path writing both fields, and
+// that is what these tests pin down. Dirtying the stack first is essential: on a
+// clean stack the buggy code reads zeros and the test passes for the wrong
+// reason.
+SAM_NOINLINE static void dirtyTheStack(int depth) {
+    volatile int scribble[4096];
+    for (int i = 0; i < 4096; i++) scribble[i] = 0xDEAD0000 + i;
+    if (depth) dirtyTheStack(depth - 1);
+}
+
+static void expectAllMoveFieldsDefined(Position& pos, const char* what) {
+    dirtyTheStack(3);
+    MoveList moves(pos);
+    ASSERT_GT(moves.size(), 0u) << what << ": expected at least one move";
+    for (const auto& m : moves) {
+        EXPECT_GE(m.gen_type, CAPTURES) << what << " " << m.toUCI() << " gen_type out of range";
+        EXPECT_LE(m.gen_type, QUEEN_PROMOTION) << what << " " << m.toUCI() << " gen_type out of range";
+        // 0xDEAD0000 + i is what dirtyTheStack leaves behind; a value in that
+        // range means the field was never written.
+        EXPECT_FALSE(m.value >= (int)0xDEAD0000 && m.value <= (int)0xDEAD0000 + 4096)
+            << what << " " << m.toUCI() << " has an uninitialised value (" << m.value << ")";
+    }
+}
+
+TEST_F(MoveGenTest, QuietMovesHaveDefinedOrderingScore) {
+    Position pos(false);
+    loadFEN(pos, START_FEN);          // opening: all 20 moves are quiet
+    expectAllMoveFieldsDefined(pos, "opening");
+}
+
+TEST_F(MoveGenTest, CastlingMovesHaveDefinedOrderingScore) {
+    Position pos(false);
+    setupPosition(pos, RED, {
+        {216, KING, RED}, {219, ROOK, RED}, {212, ROOK, RED},
+        {7, KING, YELLOW}, {113, KING, BLUE}, {110, KING, GREEN},
+    }, RED_CASTLING);
+    int castles = 0;
+    for (const auto& m : MoveList(pos)) if (m.special_move() == 4) castles++;
+    ASSERT_GT(castles, 0) << "position should offer castling";
+    expectAllMoveFieldsDefined(pos, "castling");
+}
+
+TEST_F(MoveGenTest, PromotionMovesHaveDefinedOrderingScore) {
+    Position pos(false);
+    setupPosition(pos, RED, {
+        {71, PAWN, RED}, {54, KNIGHT, BLUE},
+        {216, KING, RED}, {7, KING, YELLOW}, {113, KING, BLUE}, {110, KING, GREEN},
+    });
+    int promos = 0;
+    for (const auto& m : MoveList(pos)) if (m.promotion() != 0) promos++;
+    ASSERT_GT(promos, 0) << "position should offer promotions";
+    expectAllMoveFieldsDefined(pos, "promotion");
+}
+
+TEST_F(MoveGenTest, MoveNoneIsNotAGeneratedMove) {
+    // MOVE_NONE is used as the "no best move" sentinel in the search and the TT,
+    // so no real move may ever compare equal to it.
+    Position pos(false);
+    loadFEN(pos, START_FEN);
+    for (const auto& m : MoveList(pos))
+        EXPECT_NE(m.getRawData(), MOVE_NONE.getRawData()) << m.toUCI();
+}

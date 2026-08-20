@@ -1,5 +1,9 @@
 #include "engine.h"
 
+// Google Benchmark is optional: it powers `samaritan --perft` only, and making
+// it mandatory would put a third package between a fresh checkout (a Windows
+// one in particular) and a working engine.
+#ifdef SAMARITAN_HAS_BENCHMARK
 #include <benchmark/benchmark.h>
 
 static void BM_Perft(benchmark::State& state) {
@@ -30,6 +34,7 @@ static void BM_Perft(benchmark::State& state) {
     state.counters["NPS"] = benchmark::Counter(nodes, benchmark::Counter::kIsRate);
 }
 BENCHMARK(BM_Perft)->Unit(benchmark::kMillisecond)->DenseRange(1, 6, 1)->ArgNames({"Depth"});
+#endif // SAMARITAN_HAS_BENCHMARK
 
 int main(int argc, char* argv[])
 {
@@ -48,6 +53,7 @@ int main(int argc, char* argv[])
     }
 
     if (run_benchmarks) {
+#ifdef SAMARITAN_HAS_BENCHMARK
         benchmark::Initialize(&argc, argv);
         if (benchmark::ReportUnrecognizedArguments(argc, argv)) {
             return 1;
@@ -55,6 +61,11 @@ int main(int argc, char* argv[])
         benchmark::RunSpecifiedBenchmarks();
         benchmark::Shutdown();
         return 0;
+#else
+        std::cerr << "this build has no Google Benchmark; use bench/perft or "
+                     "the engine's own `perft <depth>` command instead\n";
+        return 1;
+#endif
     }
     else 
     {
