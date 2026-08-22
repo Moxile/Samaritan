@@ -6,3 +6,25 @@
 /samaritan/selfplay.txt
 /train/selfplay.txt
 /samaritan/workflow/
+
+# Native tool binaries. These are built by CMake into build/bench/ now; the
+# copies that used to sit next to their sources were committed by accident and
+# went stale on every change.
+/samaritan/bench/bench
+/samaritan/bench/perft
+/samaritan/bench/verify
+/samaritan/bench/coverage
+/samaritan/bench/checkinfo_test
+/samaritan/bench/piecelist_test
+/samaritan/bench/invariant_test
+/samaritan/bench/incremental_test
+/samaritan/bench/dump_bags
+/samaritan/bench/dump_features
+/samaritan/bench/dump_network
+/samaritan/bench/make_special_positions
+*.exe
+*.pdb
+*.ilk
+
+# NNUE weight files: 250 MB each, and reproducible from the trainer.
+*.snn1

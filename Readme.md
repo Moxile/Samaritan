@@ -4,19 +4,74 @@
 Welcome to Samaritan, a chess engine crafted for 4-player chess! This project is still in development, so please bear with us as we continue to enhance and polish it. Samaritan employs the Mailbox system for efficient move generation, reaching approximately 20 million nodes per second (nps, a measure of the engine's processing speed) on my hardware. I hope you have a great time exploring and using this engine!  
 
 ## Building and Running the Program  
-To build and run Samaritan, execute the following commands in your terminal:  
 
-```bash  
+Samaritan builds with CMake on Linux, macOS and Windows. The only required
+dependency is [CLI11](https://github.com/CLIUtils/CLI11); GoogleTest (unit
+tests) and Google Benchmark (`samaritan --perft`) are used when present and
+skipped when not.
+
+### Linux / macOS
+
+```bash
 cd samaritan
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release  
-cmake --build build  
-```  
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/samaritan
+```
 
-Then, launch the executable:  
-- On Windows: `.\build\samaritan.exe`  
-- On Unix-like systems: `./build/samaritan`  
+### Windows
 
-These instructions assume you have CMake installed and are running from the project’s root directory. The engine is built using CMake, making it compatible across different platforms.  
+The dependencies come from [vcpkg](https://vcpkg.io); MSVC 2022 (17.6+) or a
+recent clang-cl is needed for the C++23 features the engine uses.
+
+```powershell
+vcpkg install cli11 gtest benchmark
+cd samaritan
+cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake
+cmake --build build --config Release
+.\build\Release\samaritan.exe
+```
+
+MSYS2/MinGW works too, with the same commands as the Unix build.
+
+### Build options
+
+| option | default | meaning |
+|---|---|---|
+| `SAMARITAN_NATIVE` | `ON` | tune for this machine (`-march=native`, or `/arch:AVX2` on MSVC). Turn it **off** for a binary that has to run on other CPUs. |
+| `SAMARITAN_TOOLS` | `ON` | build the `bench/` tools and register the correctness oracles with CTest. |
+| `SAMARITAN_INTEGRATION_TESTS` | `OFF` | also register the gates that need the Python trainer (feature and forward parity). |
+
+### Testing
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+That runs the unit tests plus the bounded correctness oracles: whole-state
+invariants after every make/undo, check and pin metadata against a brute-force
+scan, differential perft against the recorded reference counts, and the
+incremental NNUE accumulators against a full refresh. Individual groups:
+`ctest -L unit`, `ctest -L oracle`.
+
+The `bench/` tools are built by `cmake --build build --target tools` and land in
+`build/bench/`; run them directly for deeper walks, e.g.
+`./build/bench/verify bench/positions.tsv bench/ref_depth5.tsv 5`.
+
+### Using the engine
+
+```
+uci
+setoption name hash value 128
+setoption name evalfile value path/to/net.snn1   # optional: NNUE weights
+position modern moves e2e4 b11c11
+go depth 6
+```
+
+`position` accepts `modern`, `classic`, `startpos` or `fen <FEN>`, each
+optionally followed by `moves <move> ...`. Moves are file+rank pairs over the
+14x14 board (`a1`..`n14`), with an optional promotion suffix (`j13j14q`). Without a network the engine
+evaluates material, which is deliberately its permanent baseline.
 
 ## Board Indices  
 The chessboard in Samaritan is represented as a grid with indices ranging from 0 to 223, as shown below. Each number corresponds to a specific square on the 4-player chessboard, which is crucial for understanding how moves are generated and positions are evaluated. For a standard 4-player chess setup, the board is typically a 14x14 grid (196 squares), though the engine uses a larger 16x14 array internally, with some indices possibly reserved for padding or special purposes. The vertical bars in the grid highlight the main playing area.  

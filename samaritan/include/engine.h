@@ -25,6 +25,7 @@ namespace samaritan
 
             // Position options
             std::string position_mode;
+            std::string move_text;
 
             // Search options
             int depth = 10;
@@ -41,6 +42,7 @@ namespace samaritan
             void handleSetOption();
             void handleUCINewGame();
             void handlePosition();
+            void handleMove();
             void handleGo();
             void handleStop();
             void handleQuit();

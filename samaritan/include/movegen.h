@@ -4,7 +4,9 @@
 
 #include "position.h"
 
-constexpr int piece_values[7] = {0, 100 ,300, 400, 500, 1000, 0};
+// Search-ordering values (not evaluation values). Capturing a king is a
+// terminal move and therefore has to sort ahead of every ordinary capture.
+constexpr int piece_values[7] = {0, 100, 300, 400, 500, 1000, 100000};
 
 const int MAX_MOVES = 512;
 

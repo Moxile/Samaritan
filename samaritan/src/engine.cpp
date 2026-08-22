@@ -54,6 +54,16 @@ namespace samaritan
         ->check(CLI::IsMember({"classic", "modern", "startpos", "fen"}));
         
         positionCommand->allow_extras();
+
+        // Convenience command for interactive use. UCI GUIs normally rebuild
+        // the position with `position ... moves ...`; accepting one move at a
+        // time makes the terminal interface much more pleasant to use.
+        auto* moveCommand = app.add_subcommand("move", "Play one legal UCI-style move")
+        ->alias("makemove")
+        ->callback([this]() { handleMove(); });
+
+        moveCommand->add_option("uci-move", move_text, "Move such as h2h3 or j13j14q")
+        ->required();
         
         auto* goCommand = app.add_subcommand("go", "COMPLETE")
         ->callback([this]() { handleGo(); });
@@ -373,6 +383,16 @@ namespace samaritan
             if (isNone(fallback)) fallback = m;
         }
         return fallback;
+    }
+
+    void Engine::handleMove()
+    {
+        Move move = parseMove(pos, toLower(move_text));
+        if (isNone(move))
+            throw std::invalid_argument("illegal or unparsable move: " + move_text);
+
+        pos.move(move);
+        std::cout << "info string played " << move.toUCI() << std::endl;
     }
 
     void Engine::handleGo()
